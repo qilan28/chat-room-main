@@ -75,8 +75,12 @@ function initLocalMessages() {
         displayMessage(message, isSelf)
       })
       lattttMessages = JSON.parse(localMessages)
+      
+      // 初始化后滚动到底部
+      setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight
+      }, 100)
     } catch (e) {
-      console.error('解析本地消息失败:', e)
       localMessages = []
     }
   }
@@ -516,6 +520,13 @@ async function fetchMessages() {
     // 更新消息记录
     localStorage.setItem('message_data', responseText)
     lattttMessages = responseText ? JSON.parse(responseText) : newMessages
+    
+    // 如果是首次加载，滚动到底部
+    if (addedMessages.length > 0 && lattttMessages.length === addedMessages.length) {
+      setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight
+      }, 100)
+    }
   } catch (error) {
     toastr.error('获取消息失败:' + error.message)
   }
@@ -777,13 +788,25 @@ async function saveSettings() {
 async function fetchOnlineUsers() {
   try {
     const response = await fetch(`${SRC_URL}/online-users`)
-    if (!response.ok) throw new Error('获取在线用户失败')
+    if (!response.ok) {
+      // 如果获取失败，至少显示当前用户
+      if (currentUser) {
+        renderOnlineUsers([currentUser])
+      }
+      return
+    }
 
     const users = await response.json()
+    // 确保当前用户在列表中
+    if (currentUser && !users.some(u => u.id === currentUser.id)) {
+      users.push(currentUser)
+    }
     renderOnlineUsers(users)
   } catch (error) {
-    console.error('获取在线用户失败:', error)
-    toastr.error('获取在线用户失败')
+    // 静默失败，显示当前用户
+    if (currentUser) {
+      renderOnlineUsers([currentUser])
+    }
   }
 }
 
