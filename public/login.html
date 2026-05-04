@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>登录/注册 - 聊天室</title>
+    <link rel="stylesheet" href="src/all.min.css" />
+    <link rel="stylesheet" href="src/mi-sans.css" />
+    <link href="src/toastr.min.css" rel="stylesheet" />
+    <script src="src/jquery.min.js"></script>
+    <script src="src/toastr.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'MiSans Normal', 'MiSans L3', 'Microsoft YaHei', sans-serif;
+      }
+
+      body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .auth-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        max-width: 450px;
+        width: 100%;
+        position: relative;
+      }
+
+      .auth-tabs {
+        display: flex;
+        background: #f5f5f5;
+      }
+
+      .auth-tab {
+        flex: 1;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        font-weight: 600;
+        color: #666;
+        transition: all 0.3s;
+        border-bottom: 3px solid transparent;
+      }
+
+      .auth-tab.active {
+        color: #4361ee;
+        background: white;
+        border-bottom-color: #4361ee;
+      }
+
+      .auth-content {
+        padding: 40px 30px;
+      }
+
+      .auth-form {
+        display: none;
+      }
+
+      .auth-form.active {
+        display: block;
+      }
+
+      .form-group {
+        margin-bottom: 25px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #333;
+        font-size: 0.95rem;
+      }
+
+      .input-wrapper {
+        position: relative;
+      }
+
+      .input-wrapper i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 14px 15px 14px 45px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.3s;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: #4361ee;
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+      }
+
+      .btn-submit {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #4361ee, #3f37c9);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 10px;
+      }
+
+      .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
+      }
+
+      .btn-submit:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .auth-footer {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+        font-size: 0.9rem;
+      }
+
+      .password-toggle {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #999;
+      }
+
+      .password-toggle:hover {
+        color: #4361ee;
+      }
+
+      @media (max-width: 480px) {
+        .auth-content {
+          padding: 30px 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="auth-container">
+      <div class="auth-tabs">
+        <div class="auth-tab active" data-tab="login">
+          <i class="fas fa-sign-in-alt"></i> 登录
+        </div>
+        <div class="auth-tab" data-tab="register">
+          <i class="fas fa-user-plus"></i> 注册
+        </div>
+      </div>
+
+      <div class="auth-content">
+        <!-- 登录表单 -->
+        <form class="auth-form active" id="login-form">
+          <div class="form-group">
+            <label for="login-username">用户名</label>
+            <div class="input-wrapper">
+              <i class="fas fa-user"></i>
+              <input type="text" id="login-username" class="form-control" placeholder="请输入用户名" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="login-password">密码</label>
+            <div class="input-wrapper">
+              <i class="fas fa-lock"></i>
+              <input type="password" id="login-password" class="form-control" placeholder="请输入密码" required />
+              <i class="fas fa-eye password-toggle" data-target="login-password"></i>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="login-btn">
+            <i class="fas fa-sign-in-alt"></i> 登录
+          </button>
+        </form>
+
+        <!-- 注册表单 -->
+        <form class="auth-form" id="register-form">
+          <div class="form-group">
+            <label for="register-username">用户名</label>
+            <div class="input-wrapper">
+              <i class="fas fa-user"></i>
+              <input
+                type="text"
+                id="register-username"
+                class="form-control"
+                placeholder="3-20个字符"
+                required
+                minlength="3"
+                maxlength="20"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="register-email">邮箱（可选）</label>
+            <div class="input-wrapper">
+              <i class="fas fa-envelope"></i>
+              <input type="email" id="register-email" class="form-control" placeholder="your@email.com" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="register-password">密码</label>
+            <div class="input-wrapper">
+              <i class="fas fa-lock"></i>
+              <input
+                type="password"
+                id="register-password"
+                class="form-control"
+                placeholder="至少6位"
+                required
+                minlength="6"
+              />
+              <i class="fas fa-eye password-toggle" data-target="register-password"></i>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="register-confirm">确认密码</label>
+            <div class="input-wrapper">
+              <i class="fas fa-lock"></i>
+              <input type="password" id="register-confirm" class="form-control" placeholder="再次输入密码" required />
+              <i class="fas fa-eye password-toggle" data-target="register-confirm"></i>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="register-btn">
+            <i class="fas fa-user-plus"></i> 注册
+          </button>
+        </form>
+      </div>
+
+      <div class="auth-footer">
+        <p>欢迎来到聊天室 💬</p>
+      </div>
+    </div>
+
+    <script>
+      const SRC_URL = window.location.origin
+
+      toastr.options = {
+        closeButton: true,
+        progressBar: true,
+        positionClass: 'toast-top-center',
+        timeOut: '3000',
+      }
+
+      // 标签切换
+      document.querySelectorAll('.auth-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.dataset.tab
+          document.querySelectorAll('.auth-tab').forEach((t) => t.classList.remove('active'))
+          document.querySelectorAll('.auth-form').forEach((f) => f.classList.remove('active'))
+          tab.classList.add('active')
+          document.getElementById(`${tabName}-form`).classList.add('active')
+        })
+      })
+
+      // 密码显示/隐藏
+      document.querySelectorAll('.password-toggle').forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+          const targetId = toggle.dataset.target
+          const input = document.getElementById(targetId)
+          if (input.type === 'password') {
+            input.type = 'text'
+            toggle.classList.remove('fa-eye')
+            toggle.classList.add('fa-eye-slash')
+          } else {
+            input.type = 'password'
+            toggle.classList.remove('fa-eye-slash')
+            toggle.classList.add('fa-eye')
+          }
+        })
+      })
+
+      // 登录
+      document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault()
+
+        const username = document.getElementById('login-username').value.trim()
+        const password = document.getElementById('login-password').value.trim()
+        const btn = document.getElementById('login-btn')
+
+        if (!username || !password) {
+          toastr.error('请输入用户名和密码')
+          return
+        }
+
+        btn.disabled = true
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...'
+
+        try {
+          const response = await fetch(`${SRC_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          })
+
+          const data = await response.json()
+
+          if (response.ok && data.success) {
+            localStorage.setItem('userToken', data.token)
+            localStorage.setItem('currentUser', JSON.stringify(data.user))
+            toastr.success('登录成功！')
+            setTimeout(() => {
+              window.location.href = '/'
+            }, 1000)
+          } else {
+            toastr.error(data.error || '登录失败')
+            btn.disabled = false
+            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录'
+          }
+        } catch (error) {
+          console.error('登录错误:', error)
+          toastr.error('登录失败，请检查网络连接')
+          btn.disabled = false
+          btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录'
+        }
+      })
+
+      // 注册
+      document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault()
+
+        const username = document.getElementById('register-username').value.trim()
+        const email = document.getElementById('register-email').value.trim()
+        const password = document.getElementById('register-password').value.trim()
+        const confirm = document.getElementById('register-confirm').value.trim()
+        const btn = document.getElementById('register-btn')
+
+        if (!username || !password) {
+          toastr.error('请输入用户名和密码')
+          return
+        }
+
+        if (password !== confirm) {
+          toastr.error('两次输入的密码不一致')
+          return
+        }
+
+        btn.disabled = true
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 注册中...'
+
+        try {
+          const response = await fetch(`${SRC_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, email }),
+          })
+
+          const data = await response.json()
+
+          if (response.ok && data.success) {
+            toastr.success('注册成功！请登录')
+            setTimeout(() => {
+              document.querySelector('[data-tab="login"]').click()
+              document.getElementById('login-username').value = username
+            }, 1000)
+          } else {
+            toastr.error(data.error || '注册失败')
+          }
+        } catch (error) {
+          console.error('注册错误:', error)
+          toastr.error('注册失败，请检查网络连接')
+        } finally {
+          btn.disabled = false
+          btn.innerHTML = '<i class="fas fa-user-plus"></i> 注册'
+        }
+      })
+
+      // 检查是否已登录
+      const userToken = localStorage.getItem('userToken')
+      if (userToken) {
+        fetch(`${SRC_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${userToken}` },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.id) {
+              toastr.info('您已登录，正在跳转...')
+              setTimeout(() => {
+                window.location.href = '/'
+              }, 1000)
+            }
+          })
+          .catch(() => {})
+      }
+    </script>
+  </body>
+</html>

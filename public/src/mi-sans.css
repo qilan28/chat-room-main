@@ -1,0 +1,10 @@
+@font-face {
+  font-family: 'MiSans Normal';
+  font-display: swap;
+  src: url(webfonts/MiSans-Normal.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'MiSans L3';
+  font-display: swap;
+  src: url(webfonts/MiSans\ L3.ttf) format('truetype');
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      body {
+        -webkit-box-sizing: border-box;
+        box-sizing: border-box;
+        background-color: #263238;
+        height: 100vh;
+        padding: 0;
+        margin: 0;
+      }
+
+      .flexbox {
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -ms-flex-wrap: wrap;
+        flex-wrap: wrap;
+      }
+      .bt-spinner {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background-color: transparent;
+        border: 4px solid #222;
+        border-top-color: #009688;
+        -webkit-animation: 1s spin linear infinite;
+        animation: 1s spin linear infinite;
+      }
+
+      @-webkit-keyframes spin {
+        from {
+          -webkit-transform: rotate(0deg);
+          transform: rotate(0deg);
+        }
+        to {
+          -webkit-transform: rotate(360deg);
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes spin {
+        from {
+          -webkit-transform: rotate(0deg);
+          transform: rotate(0deg);
+        }
+        to {
+          -webkit-transform: rotate(360deg);
+          transform: rotate(360deg);
+        }
+      }
+
+      a {
+        color: #009688;
+        display: block;
+        text-align: center;
+        font-size: 26px;
+        text-decoration: none;
+        cursor: pointer;
+        margin: 2rem auto;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="http://cfoucht.com/loadlab" target="_blank">www.cfoucht.com/loadlab</a>
+
+    <div class="flexbox">
+      <!--  BORDER TOP SPINNER  -->
+      <div>
+        <div class="bt-spinner"></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,48 @@
+{
+  "users": [
+    {
+      "id": "user1777911944170",
+      "username": "qilan",
+      "password": "123456",
+      "email": "3100676552@qq.com",
+      "avatar": "https://ui-avatars.com/api/?name=qilan&background=random",
+      "createdAt": "2026-05-04T16:25:44.170Z",
+      "lastLoginAt": "2026-05-04T16:25:56.192Z"
+    },
+    {
+      "id": "user1777912023843",
+      "username": "123",
+      "password": "123456",
+      "email": "123@qq.com",
+      "avatar": "https://ui-avatars.com/api/?name=123&background=random",
+      "createdAt": "2026-05-04T16:27:03.843Z",
+      "lastLoginAt": "2026-05-04T17:04:54.637Z"
+    }
+  ],
+  "sessions": {
+    "cq5tx9riawmorevh7k": {
+      "userId": "user1777911944170",
+      "username": "qilan",
+      "createdAt": "2026-05-04T16:25:56.192Z",
+      "expiresAt": "2026-05-11T16:25:56.192Z"
+    },
+    "t4cmxzsfizdmorex1o1": {
+      "userId": "user1777912023843",
+      "username": "123",
+      "createdAt": "2026-05-04T16:27:09.361Z",
+      "expiresAt": "2026-05-11T16:27:09.361Z"
+    },
+    "vhics3g54ermorg1of1": {
+      "userId": "user1777912023843",
+      "username": "123",
+      "createdAt": "2026-05-04T16:58:45.085Z",
+      "expiresAt": "2026-05-11T16:58:45.085Z"
+    },
+    "sfk6lqw7axbmorg9lkd": {
+      "userId": "user1777912023843",
+      "username": "123",
+      "createdAt": "2026-05-04T17:04:54.637Z",
+      "expiresAt": "2026-05-11T17:04:54.637Z"
+    }
+  }
+}

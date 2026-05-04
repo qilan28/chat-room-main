@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>聊天室</title>
+    <link rel="stylesheet" href="src/all.min.css" />
+    <link rel="stylesheet" href="src/mi-sans.css" />
+    <link rel="stylesheet" href="src/style.css" />
+    <script src="src/jquery.min.js"></script>
+    <link href="src/toastr.min.css" rel="stylesheet" />
+    <script src="src/toastr.min.js"></script>
+  </head>
+  <body id="body">
+    <div id="loading-screen">
+      <div class="loader">
+        <div class="flexbox">
+          <div>
+            <div class="bt-loading"></div>
+          </div>
+        </div>
+        <p class="upload-label">正在上传</p>
+      </div>
+    </div>
+
+    <div class="chat-container">
+      <div class="sidebar">
+        <div class="user-profile">
+          <img id="current-user-avatar" src="https://ui-avatars.com/api/?name=User&background=random" alt="头像" />
+          <div>
+            <h3 id="current-user-name">用户</h3>
+            <p id="user-status">在线</p>
+          </div>
+        </div>
+        <button id="settings-btn"><i class="fas fa-cog"></i> 设置</button>
+        <button id="logout-btn" style="margin-top: 10px;"><i class="fas fa-sign-out-alt"></i> 登出</button>
+        <div class="online-users">
+          <h4>在线用户</h4>
+          <div class="user-list"></div>
+        </div>
+      </div>
+
+      <div class="chat-area">
+        <div class="chat-header">
+          <h2>公共聊天室</h2>
+          <div class="chat-info">
+            <button id="private-chat-btn" class="header-btn" title="私聊">
+              <i class="fas fa-comments"></i>
+              <span class="badge" id="private-badge" style="display: none;">0</span>
+            </button>
+            <button id="notification-btn" class="header-btn" title="通知">
+              <i class="fas fa-bell"></i>
+              <span class="badge" id="notification-badge" style="display: none;">0</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="messages" id="messages-container">
+          <!-- 消息将通过JS动态添加 -->
+          <button class="scroll-to-bottom" id="scroll-to-bottom" style="display: none;">
+            <i class="fas fa-arrow-down"></i>
+          </button>
+        </div>
+
+        <!-- 引用预览 -->
+        <div class="quote-preview" id="quote-preview">
+          <button class="quote-preview-close" id="quote-preview-close">&times;</button>
+          <div class="quote-preview-author" id="quote-preview-author"></div>
+          <div class="quote-preview-content" id="quote-preview-content"></div>
+        </div>
+
+        <div class="message-input">
+          <div class="input-actions">
+            <div class="file-upload">
+              <label for="file-input">
+                <i class="fas fa-paperclip"></i>
+              </label>
+              <input type="file" id="file-input" multiple style="display: none" />
+            </div>
+          </div>
+          <input type="text" id="message-input" placeholder="输入消息... (回车发送)" />
+          <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div class="attachments-preview" id="attachments-preview"></div>
+      </div>
+    </div>
+
+    <div class="modal" id="settings-modal">
+      <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <h2>用户设置</h2>
+        <div class="form-group">
+          <label for="set-username">用户名</label>
+          <input type="text" id="set-username" placeholder="输入用户名" />
+        </div>
+        <div class="form-group">
+          <label for="set-avatar">头像URL</label>
+          <input type="text" id="set-avatar" placeholder="https://example.com/114514.jpg" />
+        </div>
+
+        <div class="form-group">
+          <label for="avatar-upload">上传头像</label>
+          <div class="avatar-upload">
+            <label for="avatar-file-input" class="upload-btn">选择文件</label>
+            <input type="file" id="avatar-file-input" accept="image/*" style="display: none" />
+            <span id="avatar-file-name">未选择文件</span>
+          </div>
+        </div>
+        <div class="avatar-preview">
+          <img id="avatar-preview" src="https://ui-avatars.com/api/?name=User&background=random" alt="头像预览" />
+        </div>
+        <button id="save-settings">保存设置</button>
+      </div>
+    </div>
+    <footer class="footer">
+      <p class="footer-a">chat-room 1.0 |<a href="https://github.com/woshimaniubi8/chat-room/" class="footer-a" target="_blank">View in Github</a></p>
+    </footer>
+
+    <!-- 右键菜单 -->
+    <div class="context-menu" id="message-context-menu">
+      <div class="context-menu-item" data-action="copy">
+        <i class="fas fa-copy"></i>
+        <span>复制</span>
+      </div>
+      <div class="context-menu-item" data-action="forward">
+        <i class="fas fa-share"></i>
+        <span>转发</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item" data-action="quote">
+        <i class="fas fa-quote-left"></i>
+        <span>引用</span>
+      </div>
+      <div class="context-menu-divider" id="admin-menu-divider" style="display: none;"></div>
+      <div class="context-menu-item danger" data-action="recall" id="recall-menu-item" style="display: none;">
+        <i class="fas fa-undo"></i>
+        <span>撤回</span>
+      </div>
+      <div class="context-menu-item danger" data-action="delete" id="delete-menu-item" style="display: none;">
+        <i class="fas fa-trash-alt"></i>
+        <span>删除</span>
+      </div>
+    </div>
+
+    <!-- 通知中心 -->
+    <div class="notification-panel" id="notification-panel">
+      <div class="panel-header">
+        <h3><i class="fas fa-bell"></i> 通知中心</h3>
+        <button class="panel-close" id="notification-close">&times;</button>
+      </div>
+      <div class="panel-body" id="notification-list">
+        <p class="empty-message">暂无通知</p>
+      </div>
+    </div>
+
+    <!-- 私聊面板 -->
+    <div class="notification-panel" id="private-chat-panel">
+      <div class="panel-header">
+        <h3><i class="fas fa-comments"></i> 私聊</h3>
+        <button class="panel-close" id="private-close">&times;</button>
+      </div>
+      <div class="panel-body" id="private-chat-list">
+        <p class="empty-message">暂无私聊</p>
+      </div>
+    </div>
+    <script>
+      toastr.options = {
+        // toastr配置
+        closeButton: true,
+        debug: false,
+        progressBar: true,
+        positionClass: 'toast-top-center',
+        showDuration: '400',
+        hideDuration: '1000',
+        timeOut: '3000',
+        extendedTimeOut: '1000',
+        showEasing: 'swing',
+        hideEasing: 'linear',
+        showMethod: 'fadeIn',
+        hideMethod: 'fadeOut',
+      }
+    </script>
+    <script src="src/script.js"></script>
+  </body>
+</html>

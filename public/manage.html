@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>消息管理系统</title>
+    <link rel="stylesheet" href="src/all.min.css" />
+    <link rel="stylesheet" href="src/mi-sans.css" />
+    <script src="src/jquery.min.js"></script>
+    <link href="src/toastr.min.css" rel="stylesheet" />
+    <script src="src/toastr.min.js"></script>
+    <style>
+      :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --danger-color: #e63946;
+        --success-color: #2a9d8f;
+        --dark-color: #1d3557;
+        --light-color: #f8f9fa;
+        --gray-color: #6c757d;
+        --border-color: #dee2e6;
+        --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      a {
+        color: #1cc5b4;
+        display: inline-flex;
+        /* text-align: center; */
+        /* font-size: 26px; */
+        text-decoration: none;
+        cursor: pointer;
+        /* margin: 2rem auto; */
+      }
+      a:hover {
+        text-decoration: underline;
+        transition: text-decoration 0.3s ease;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'MiSans Normal', 'MiSans L3', 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background-color: #f5f7fb;
+        color: #333;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 10px 0;
+        box-shadow: var(--shadow);
+        margin-bottom: 30px;
+        border-radius: 0 0 10px 10px;
+      }
+      .sys_msg {
+        color: pink;
+        background-color: rgb(27, 128, 223);
+        width: auto;
+        border-radius: 8px;
+        padding: 2px 6px;
+      }
+      .gg {
+        color: #fa56ec;
+        margin-right: 7px;
+      }
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .logo i {
+        font-size: 2rem;
+      }
+
+      .logo h1 {
+        font-size: 1.8rem;
+        font-weight: 600;
+      }
+
+      .back-btn {
+        background-color: white;
+        color: var(--primary-color);
+        border: none;
+        padding: 10px 20px;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .back-btn:hover {
+        background-color: #eef2ff;
+        transform: translateY(-2px);
+      }
+
+      .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: var(--shadow);
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+      }
+
+      .icon-messages {
+        background: #e3f2fd;
+        color: var(--primary-color);
+      }
+      .icon-users {
+        background: #e8f5e9;
+        color: var(--success-color);
+      }
+      .icon-storage {
+        background: #f3e5f5;
+        color: #9c27b0;
+      }
+
+      .stat-info h3 {
+        font-size: 1.2rem;
+        margin-bottom: 5px;
+        color: var(--gray-color);
+      }
+
+      .stat-info p {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--dark-color);
+      }
+
+      .controls {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        gap: 15px;
+        flex-wrap: wrap;
+      }
+
+      .search-box {
+        display: flex;
+        align-items: center;
+        background: white;
+        border-radius: 8px;
+        padding: 10px 15px;
+        box-shadow: var(--shadow);
+        flex-grow: 1;
+        max-width: 400px;
+      }
+
+      .search-box i {
+        color: var(--gray-color);
+        margin-right: 10px;
+      }
+
+      .search-box input {
+        border: none;
+        outline: none;
+        font-size: 1rem;
+        width: 100%;
+      }
+
+      .filter-buttons {
+        display: flex;
+        gap: 10px;
+      }
+
+      .filter-btn {
+        background: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        box-shadow: var(--shadow);
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .filter-btn.active {
+        background: var(--primary-color);
+        color: white;
+      }
+
+      .filter-btn:hover:not(.active) {
+        background: #f0f0f0;
+      }
+      .ee-btn {
+        background: white;
+        margin-right: 20px;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        box-shadow: var(--shadow);
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .ee-btn:active {
+        background: var(--primary-color);
+        color: white;
+      }
+
+      .ee-btn:hover(.active) {
+        background: #f0f0f0;
+      }
+
+      .messages-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        margin-bottom: 40px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      thead {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+      }
+
+      th {
+        padding: 18px 20px;
+        text-align: left;
+        font-weight: 600;
+      }
+
+      tbody tr {
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      tbody tr:last-child {
+        border-bottom: none;
+      }
+
+      tbody tr:hover {
+        background-color: #f8f9ff;
+      }
+
+      td {
+        padding: 16px 20px;
+      }
+
+      .user-cell {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+
+      .message-content {
+        max-width: 400px;
+        line-height: 1.5;
+      }
+
+      .message-preview {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 300px;
+      }
+
+      .attachment-badge {
+        background: #e9ecef;
+        color: var(--gray-color);
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 5px;
+      }
+
+      .actions-cell {
+        display: flex;
+        gap: 10px;
+      }
+
+      .action-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .edit-btn {
+        background: #e3f2fd;
+        color: var(--primary-color);
+      }
+
+      .delete-btn {
+        background: #fde8e9;
+        color: var(--danger-color);
+      }
+
+      .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+
+      .edit-btn:hover {
+        background: #d0e4ff;
+      }
+
+      .delete-btn:hover {
+        background: #fcd7d9;
+      }
+
+      /* 模态框样式 */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+      }
+
+      .modal-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .modal-header h2 {
+        font-size: 1.4rem;
+        font-weight: 600;
+      }
+
+      .close-modal {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
+      .modal-body {
+        padding: 25px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: var(--dark-color);
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border 0.3s;
+      }
+
+      .form-control:focus {
+        border-color: var(--primary-color);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+      }
+
+      textarea.form-control {
+        min-height: 150px;
+        resize: vertical;
+      }
+
+      .modal-footer {
+        padding: 20px;
+        background: #f8f9fa;
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+      }
+
+      .btn {
+        padding: 12px 25px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .btn-primary {
+        background: var(--primary-color);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: var(--secondary-color);
+        transform: translateY(-2px);
+      }
+
+      .btn-secondary {
+        background: #e9ecef;
+        color: var(--gray-color);
+      }
+
+      .btn-secondary:hover {
+        background: #dde0e4;
+      }
+
+      .btn-danger {
+        background: var(--danger-color);
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background: #d90429;
+        transform: translateY(-2px);
+      }
+      #noticepreview-container {
+        padding: 10px;
+        border-radius: 8px;
+        margin-top: 10px;
+        margin-bottom: 20px;
+        max-width: 75vh;
+        background-color: #d8e2ec;
+        border-bottom-left-radius: 4px;
+        padding: 12px 16px;
+        border-radius: 18px;
+        position: relative;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      /* 响应式设计 */
+      @media (max-width: 768px) {
+        .header-content {
+          flex-direction: column;
+          gap: 15px;
+          text-align: center;
+        }
+
+        .controls {
+          flex-direction: column;
+        }
+
+        .search-box {
+          max-width: 100%;
+        }
+
+        .filter-buttons {
+          width: 100%;
+          overflow-x: auto;
+          padding-bottom: 10px;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+        }
+
+        .stat-card {
+          flex-direction: column;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <i class="fas fa-comments"></i>
+            <h1>消息管理系统</h1>
+          </div>
+          <button class="back-btn" onclick="window.location.href='/'"><i class="fas fa-arrow-left"></i> 返回聊天室</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="stats-cards">
+        <div class="stat-card">
+          <div class="stat-icon icon-messages">
+            <i class="fas fa-envelope"></i>
+          </div>
+          <div class="stat-info">
+            <h3>总消息数</h3>
+            <p id="total-messages">0</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-users">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-info">
+            <h3>活跃用户</h3>
+            <p id="active-users">0</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-storage">
+            <i class="fas fa-database"></i>
+          </div>
+          <div class="stat-info">
+            <h3>附件总数</h3>
+            <p id="total-attachments">0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="search-input" placeholder="搜索消息内容..." />
+        </div>
+
+        <div class="filter-buttons">
+          <button class="ee-btn" onclick="openNoticeModal()">公告</button>
+          <button class="ee-btn" onclick="openRoomSettingsModal()">聊天室设置</button>
+          <button class="ee-btn" onclick="openAdminManageModal()">管理员管理</button>
+          <button class="ee-btn" onclick="openBadgeManageModal()">铭牌管理</button>
+          <button class="ee-btn" onclick="openAdminSettingsModal()">个人设置</button>
+          <button class="filter-btn active" data-filter="all">全部消息</button>
+          <button class="filter-btn" data-filter="text">仅文本</button>
+          <button class="filter-btn" data-filter="media">含媒体</button>
+          <button class="filter-btn" data-filter="attachments">含附件</button>
+        </div>
+      </div>
+
+      <div class="messages-table">
+        <table>
+          <thead>
+            <tr>
+              <th>用户</th>
+              <th>消息内容</th>
+              <th>时间</th>
+              <th>附件</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="messages-body">
+            <!-- 消息将通过JS动态加载 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 编辑消息模态框 -->
+    <div class="modal" id="notice-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>编辑公告</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="edit-timestamp">更新时间</label>
+            <input type="text" id="edit-noticetimestamp" class="form-control" readonly />
+          </div>
+
+          <div class="form-group">
+            <label for="edit-noticecontent">公告内容</label>
+            <textarea id="edit-noticecontent" class="form-control"></textarea>
+            <button class="btn btn-primary" id="noticeDefalut">默认</button>
+          </div>
+
+          <div class="form-group">
+            <label>预览</label>
+            <div id="noticepreview-container"><span class="gg">[公告] </span></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancel-edit">取消</button>
+          <button class="btn btn-primary" id="save-noticeedit">保存并发布</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑消息模态框 -->
+    <div class="modal" id="edit-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>编辑消息</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="edit-username">用户</label>
+            <input type="text" id="edit-username" class="form-control" readonly />
+          </div>
+
+          <div class="form-group">
+            <label for="edit-timestamp">时间</label>
+            <input type="text" id="edit-timestamp" class="form-control" readonly />
+          </div>
+
+          <div class="form-group">
+            <label for="edit-content">message_id</label>
+            <input id="edit-msgid" class="form-control" readonly />
+          </div>
+
+          <div class="form-group">
+            <label for="edit-content">消息内容</label>
+            <textarea id="edit-content" class="form-control"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>附件</label>
+            <div id="attachments-container"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancel-edit">取消</button>
+          <button class="btn btn-primary" id="save-edit">保存更改</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal" id="delete-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>删除消息</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>确定要删除此消息吗？此操作不可恢复。</p>
+          <p id="delete-message-preview"></p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancel-delete">取消</button>
+          <button class="btn btn-danger" id="confirm-delete">删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 聊天室设置模态框 -->
+    <div class="modal" id="room-settings-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>聊天室设置</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="room-name">聊天室名称</label>
+            <input type="text" id="room-name" class="form-control" placeholder="请输入聊天室名称" />
+          </div>
+
+          <div class="form-group">
+            <label for="welcome-message">欢迎语</label>
+            <textarea id="welcome-message" class="form-control" placeholder="请输入欢迎语"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="max-message-length">消息最大长度</label>
+            <input type="number" id="max-message-length" class="form-control" placeholder="5000" min="100" max="10000" />
+          </div>
+
+          <div class="form-group">
+            <label>系统消息样式设置</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <label for="sys-bg-color" style="font-size: 0.9rem; font-weight: normal;">背景颜色</label>
+                <input type="color" id="sys-bg-color" class="form-control" style="height: 40px;" />
+              </div>
+              <div>
+                <label for="sys-text-color" style="font-size: 0.9rem; font-weight: normal;">文字颜色</label>
+                <input type="color" id="sys-text-color" class="form-control" style="height: 40px;" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>样式预览</label>
+            <div style="padding: 15px; background: #f5f5f5; border-radius: 8px;">
+              <span id="sys-msg-preview" class="sys_msg">信息支持html标签哦~</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancel-room-settings">取消</button>
+          <button class="btn btn-primary" id="save-room-settings">保存设置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 管理员设置模态框 -->
+    <div class="modal" id="admin-settings-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>个人设置</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>当前管理员</label>
+            <input type="text" id="current-admin" class="form-control" readonly />
+          </div>
+
+          <div class="form-group">
+            <label for="old-password">原密码</label>
+            <input type="password" id="old-password" class="form-control" placeholder="请输入原密码" />
+          </div>
+
+          <div class="form-group">
+            <label for="new-password">新密码</label>
+            <input type="password" id="new-password" class="form-control" placeholder="请输入新密码" />
+          </div>
+
+          <div class="form-group">
+            <label for="confirm-password">确认新密码</label>
+            <input type="password" id="confirm-password" class="form-control" placeholder="请再次输入新密码" />
+          </div>
+
+          <div class="form-group">
+            <button class="btn btn-danger" id="logout-btn" style="width: 100%;">
+              <i class="fas fa-sign-out-alt"></i> 退出登录
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancel-admin-settings">取消</button>
+          <button class="btn btn-primary" id="save-admin-password">修改密码</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 管理员管理模态框 -->
+    <div class="modal" id="admin-manage-modal">
+      <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+          <h2>管理员管理</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom: 20px;">
+            <button class="btn btn-primary" id="add-admin-btn">
+              <i class="fas fa-plus"></i> 添加管理员
+            </button>
+          </div>
+          <table style="width: 100%;">
+            <thead>
+              <tr>
+                <th>用户名</th>
+                <th>角色</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="admin-list-body">
+              <!-- 管理员列表 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加管理员模态框 -->
+    <div class="modal" id="add-admin-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>添加管理员</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="new-admin-username">用户名</label>
+            <input type="text" id="new-admin-username" class="form-control" placeholder="请输入用户名" />
+          </div>
+          <div class="form-group">
+            <label for="new-admin-password">密码</label>
+            <input type="password" id="new-admin-password" class="form-control" placeholder="请输入密码" />
+          </div>
+          <div class="form-group">
+            <label for="new-admin-role">角色</label>
+            <select id="new-admin-role" class="form-control">
+              <option value="normal">普通管理员</option>
+              <option value="super">超级管理员</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancel-add-admin">取消</button>
+          <button class="btn btn-primary" id="confirm-add-admin">添加</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 铭牌管理模态框 -->
+    <div class="modal" id="badge-manage-modal">
+      <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+          <h2>铭牌管理</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom: 20px;">
+            <button class="btn btn-primary" id="add-badge-btn">
+              <i class="fas fa-plus"></i> 添加铭牌
+            </button>
+            <button class="btn btn-primary" id="assign-badge-btn" style="margin-left: 10px;">
+              <i class="fas fa-user-tag"></i> 分配铭牌
+            </button>
+          </div>
+          <div id="badge-list">
+            <!-- 铭牌列表 -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分配铭牌模态框 -->
+    <div class="modal" id="assign-badge-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>分配铭牌</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="assign-username">用户名</label>
+            <input type="text" id="assign-username" class="form-control" placeholder="请输入用户名" />
+          </div>
+          <div class="form-group">
+            <label>选择铭牌</label>
+            <div id="badge-checkboxes">
+              <!-- 铭牌复选框 -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancel-assign-badge">取消</button>
+          <button class="btn btn-primary" id="confirm-assign-badge">保存</button>
+        </div>
+      </div>
+    </div>
+    <script>
+      toastr.options = {
+        // toastr配置
+        closeButton: true, //是否显示关闭按钮
+        debug: false, //是否使用debug模式
+        progressBar: true, //是否显示进度条，当为false时候不显示；当为true时候，显示进度条，当进度条缩短到0时候，消息通知弹窗消失
+        positionClass: 'toast-top-center', //显示的动画位置
+        showDuration: '400', //显示的动画时间
+        hideDuration: '1000', //消失的动画时间
+        timeOut: '3000', //展现时间
+        extendedTimeOut: '1000', //加长展示时间
+        showEasing: 'swing', //显示时的动画缓冲方式
+        hideEasing: 'linear', //消失时的动画缓冲方式
+        showMethod: 'fadeIn', //显示时的动画方式
+        hideMethod: 'fadeOut', //消失时的动画方式
+      }
+    </script>
+    <script src="src/manage.js"></script>
+  </body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>管理员登录 - 聊天室</title>
+    <link rel="stylesheet" href="src/all.min.css" />
+    <link rel="stylesheet" href="src/mi-sans.css" />
+    <link href="src/toastr.min.css" rel="stylesheet" />
+    <script src="src/jquery.min.js"></script>
+    <script src="src/toastr.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'MiSans Normal', 'MiSans L3', 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .login-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        max-width: 450px;
+        width: 100%;
+      }
+
+      .login-header {
+        background: linear-gradient(135deg, #4361ee, #3f37c9);
+        color: white;
+        padding: 40px 30px;
+        text-align: center;
+      }
+
+      .login-header i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+      }
+
+      .login-header h1 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+
+      .login-header p {
+        opacity: 0.9;
+        font-size: 0.95rem;
+      }
+
+      .login-body {
+        padding: 40px 30px;
+      }
+
+      .form-group {
+        margin-bottom: 25px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #333;
+        font-size: 0.95rem;
+      }
+
+      .input-wrapper {
+        position: relative;
+      }
+
+      .input-wrapper i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 14px 15px 14px 45px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.3s;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: #4361ee;
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+      }
+
+      .btn-login {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #4361ee, #3f37c9);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 10px;
+      }
+
+      .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
+      }
+
+      .btn-login:active {
+        transform: translateY(0);
+      }
+
+      .btn-login:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .login-footer {
+        text-align: center;
+        padding: 20px 30px 30px;
+        color: #666;
+      }
+
+      .login-footer a {
+        color: #4361ee;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .login-footer a:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 480px) {
+        .login-header {
+          padding: 30px 20px;
+        }
+
+        .login-body {
+          padding: 30px 20px;
+        }
+
+        .login-header h1 {
+          font-size: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="login-header">
+        <i class="fas fa-shield-alt"></i>
+        <h1>管理员登录</h1>
+        <p>聊天室管理系统</p>
+      </div>
+
+      <div class="login-body">
+        <form id="login-form">
+          <div class="form-group">
+            <label for="username">用户名</label>
+            <div class="input-wrapper">
+              <i class="fas fa-user"></i>
+              <input type="text" id="username" class="form-control" placeholder="请输入管理员用户名" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="password">密码</label>
+            <div class="input-wrapper">
+              <i class="fas fa-lock"></i>
+              <input type="password" id="password" class="form-control" placeholder="请输入密码" required />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-login" id="login-btn">
+            <i class="fas fa-sign-in-alt"></i> 登录
+          </button>
+        </form>
+      </div>
+
+      <div class="login-footer">
+        <a href="/"><i class="fas fa-arrow-left"></i> 返回聊天室</a>
+      </div>
+    </div>
+
+    <script>
+      toastr.options = {
+        closeButton: true,
+        debug: false,
+        progressBar: true,
+        positionClass: 'toast-top-center',
+        showDuration: '400',
+        hideDuration: '1000',
+        timeOut: '3000',
+        extendedTimeOut: '1000',
+        showEasing: 'swing',
+        hideEasing: 'linear',
+        showMethod: 'fadeIn',
+        hideMethod: 'fadeOut',
+      }
+
+      const loginForm = document.getElementById('login-form')
+      const loginBtn = document.getElementById('login-btn')
+      const usernameInput = document.getElementById('username')
+      const passwordInput = document.getElementById('password')
+
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault()
+
+        const username = usernameInput.value.trim()
+        const password = passwordInput.value.trim()
+
+        if (!username || !password) {
+          toastr.error('请输入用户名和密码')
+          return
+        }
+
+        loginBtn.disabled = true
+        loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...'
+
+        try {
+          const response = await fetch('/admin/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password }),
+          })
+
+          const data = await response.json()
+
+          if (response.ok && data.success) {
+            localStorage.setItem('adminToken', data.token)
+            localStorage.setItem('adminUsername', data.username)
+            toastr.success('登录成功！正在跳转...')
+            setTimeout(() => {
+              window.location.href = '/message_manage'
+            }, 1000)
+          } else {
+            toastr.error(data.error || '登录失败')
+            loginBtn.disabled = false
+            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录'
+          }
+        } catch (error) {
+          console.error('登录错误:', error)
+          toastr.error('登录失败，请检查网络连接')
+          loginBtn.disabled = false
+          loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录'
+        }
+      })
+
+      // 检查是否已登录
+      const adminToken = localStorage.getItem('adminToken')
+      if (adminToken) {
+        toastr.info('检测到已登录，正在跳转...')
+        setTimeout(() => {
+          window.location.href = '/message_manage'
+        }, 1000)
+      }
+    </script>
+  </body>
+</html>

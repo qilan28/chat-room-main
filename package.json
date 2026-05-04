@@ -1,0 +1,21 @@
+{
+  "name": "chat_room",
+  "version": "1.0.0",
+  "description": "A chat room",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js",
+    "start": "node index.js"
+  },
+  "author": "wohenaighs@163.com",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "https": "^1.0.0",
+    "multer": "^2.0.2",
+    "ws": "^8.18.3",
+    "wss": "^3.3.4"
+  }
+}
