@@ -1106,6 +1106,28 @@ function updateNotificationBadge() {
   }
 }
 
+// 心跳机制 - 保持在线状态
+async function sendHeartbeat() {
+  if (!userToken) return
+  
+  try {
+    const response = await fetch(`${SRC_URL}/heartbeat`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${userToken}`
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      // 心跳成功，更新在线用户列表
+      fetchOnlineUsers()
+    }
+  } catch (error) {
+    // 静默失败
+  }
+}
+
 // 初始化
 async function init() {
   const isAuthenticated = await checkAuth()
@@ -1122,6 +1144,12 @@ async function init() {
   fetchNoticeContent()
   fetchOnlineUsers()
   setupWebSocket()
+  
+  // 立即发送一次心跳，标记为在线
+  sendHeartbeat()
+  
+  // 每30秒发送一次心跳
+  setInterval(sendHeartbeat, 30000)
 
   // 定时获取通知
   setInterval(fetchNotifications, 30000)

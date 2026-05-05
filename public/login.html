@@ -86,12 +86,14 @@
         position: relative;
       }
 
-      .input-wrapper i {
+      /* 左侧图标（用户名、邮箱、锁） */
+      .input-wrapper > i:first-child {
         position: absolute;
         left: 15px;
         top: 50%;
         transform: translateY(-50%);
         color: #999;
+        z-index: 1;
       }
 
       .form-control {
@@ -101,6 +103,11 @@
         border-radius: 10px;
         font-size: 1rem;
         transition: all 0.3s;
+      }
+
+      /* 密码输入框需要额外的右侧内边距，留出空间给眼睛图标 */
+      input[type="password"].form-control {
+        padding-right: 50px !important;
       }
 
       .form-control:focus {
@@ -148,10 +155,20 @@
         transform: translateY(-50%);
         cursor: pointer;
         color: #999;
+        padding: 10px;
+        z-index: 10;
+        user-select: none;
+        transition: all 0.3s;
+        font-size: 16px;
       }
 
       .password-toggle:hover {
         color: #4361ee;
+        transform: translateY(-50%) scale(1.1);
+      }
+
+      .password-toggle:active {
+        transform: translateY(-50%) scale(0.95);
       }
 
       @media (max-width: 480px) {

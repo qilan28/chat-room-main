@@ -133,17 +133,29 @@ const upload = multer({
   },
 })
 
+// 在线用户管理（使用userId作为key）
 let onlineUsers = {}
 
-// 每5分钟清理一次不活跃用户（超过5分钟未活动）
+// 每2分钟清理一次不活跃用户（超过3分钟未活动）
 setInterval(() => {
   const now = Date.now()
-  Object.keys(onlineUsers).forEach((username) => {
-    if (now - onlineUsers[username].lastActive > 5 * 60 * 1000) {
-      delete onlineUsers[username]
+  Object.keys(onlineUsers).forEach((userId) => {
+    if (now - onlineUsers[userId].lastActive > 3 * 60 * 1000) {
+      console.log(`用户 ${onlineUsers[userId].username} 超时下线`)
+      delete onlineUsers[userId]
     }
   })
-}, 5 * 60 * 1000)
+}, 2 * 60 * 1000)
+
+// 更新用户在线状态
+function updateUserOnlineStatus(userId, username, avatar) {
+  onlineUsers[userId] = {
+    id: userId,
+    username: username,
+    avatar: avatar,
+    lastActive: Date.now()
+  }
+}
 
 app.use(bodyParser.json())
 app.use(cors())
@@ -231,11 +243,8 @@ app.post('/messages', (req, res) => {
     return res.status(400).json({ error: '消息内容不能为空' })
   }
 
-  onlineUsers[newMessage.username] = {
-    username: newMessage.username,
-    avatar: newMessage.avatar,
-    lastActive: Date.now(),
-  }
+  // 更新发送者的在线状态（如果有userId）
+  // 注：这里只是兼容旧逻辑，主要通过心跳更新
 
   fs.readFile(MESSAGES_FILE, 'utf-8', (err, data) => {
     if (err) {
@@ -308,10 +317,43 @@ app.post('/notice', (req, res) => {
 app.get('/online-users', (req, res) => {
   // 返回在线用户列表
   const users = Object.values(onlineUsers).map((user) => ({
+    id: user.id,
     username: user.username,
     avatar: user.avatar,
   }))
   res.json(users)
+})
+
+// 心跳API - 保持在线状态
+app.post('/heartbeat', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  
+  verifyUserToken(token, (isValid, session) => {
+    if (!isValid) {
+      return res.status(401).json({ error: '未登录' })
+    }
+    
+    // 获取用户信息
+    fs.readFile(ACCOUNTS_FILE, 'utf-8', (err, data) => {
+      if (err) {
+        return res.status(500).json({ error: '服务器错误' })
+      }
+      
+      try {
+        const accounts = JSON.parse(data)
+        const user = accounts.find(u => u.id === session.userId)
+        
+        if (user) {
+          updateUserOnlineStatus(user.id, user.username, user.avatar)
+          res.json({ success: true, onlineCount: Object.keys(onlineUsers).length })
+        } else {
+          res.status(404).json({ error: '用户不存在' })
+        }
+      } catch (parseErr) {
+        res.status(500).json({ error: '服务器错误' })
+      }
+    })
+  })
 })
 app.get('/message_manage', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'manage.html'))
