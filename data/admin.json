@@ -1,11 +1,36 @@
 {
-  "username": "admin",
-  "password": "admin123",
+  "admins": [
+    {
+      "id": "admin001",
+      "username": "admin",
+      "password": "admin123",
+      "role": "super",
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "admin1778001391355",
+      "username": "qilan",
+      "password": "123456",
+      "role": "normal",
+      "createdAt": "2026-05-05T17:16:31.355Z"
+    }
+  ],
   "sessions": [
     {
-      "token": "co206wd5q5cmorckjq5",
-      "createdAt": "2026-05-04T15:21:27.005Z",
-      "expiresAt": "2026-05-05T15:21:27.005Z"
+      "token": "zgbtyusf2uqmostba11",
+      "adminId": "admin001",
+      "username": "admin",
+      "role": "super",
+      "createdAt": "2026-05-05T15:57:54.181Z",
+      "expiresAt": "2026-05-06T15:57:54.181Z"
+    },
+    {
+      "token": "dd3uy7eg73omosvzd7a",
+      "adminId": "admin001",
+      "username": "admin",
+      "role": "super",
+      "createdAt": "2026-05-05T17:12:37.270Z",
+      "expiresAt": "2026-05-06T17:12:37.270Z"
     }
   ]
 }

@@ -73,6 +73,7 @@ const BADGES_FILE = path.join(DATA_DIR, 'badges.json')
 const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json')
 const PRIVATE_MESSAGES_FILE = path.join(DATA_DIR, 'private_messages.json')
 const NOTIFICATIONS_FILE = path.join(DATA_DIR, 'notifications.json')
+const BANNED_WORDS_FILE = path.join(DATA_DIR, 'banned_words.json')
 
 if (!fs.existsSync(MESSAGES_FILE)) fs.writeFileSync(MESSAGES_FILE, '[]', 'utf-8')
 if (!fs.existsSync(NOTICE_FILE))
@@ -108,6 +109,7 @@ if (!fs.existsSync(ACCOUNTS_FILE))
   )
 if (!fs.existsSync(PRIVATE_MESSAGES_FILE)) fs.writeFileSync(PRIVATE_MESSAGES_FILE, '[]', 'utf-8')
 if (!fs.existsSync(NOTIFICATIONS_FILE)) fs.writeFileSync(NOTIFICATIONS_FILE, '{}', 'utf-8')
+if (!fs.existsSync(BANNED_WORDS_FILE)) fs.writeFileSync(BANNED_WORDS_FILE, '{"words": []}', 'utf-8')
 
 // Multer
 const storage = multer.diskStorage({
@@ -172,6 +174,34 @@ const staticOptions = {
 
 app.use('/uploads', express.static(UPLOADS_DIR, staticOptions))
 app.use(express.static('public', staticOptions))
+
+// 违禁词检测函数
+function containsBannedWords(text) {
+  if (!text) return { hasBanned: false, words: [] }
+  
+  try {
+    const data = fs.readFileSync(BANNED_WORDS_FILE, 'utf-8')
+    const bannedData = JSON.parse(data)
+    const bannedWords = bannedData.words || []
+    
+    const foundWords = []
+    const lowerText = text.toLowerCase()
+    
+    for (const word of bannedWords) {
+      if (word && lowerText.includes(word.toLowerCase())) {
+        foundWords.push(word)
+      }
+    }
+    
+    return {
+      hasBanned: foundWords.length > 0,
+      words: foundWords
+    }
+  } catch (error) {
+    console.error('检测违禁词失败:', error)
+    return { hasBanned: false, words: [] }
+  }
+}
 
 // 头像上传
 app.post('/upload-avatar', upload.single('avatar'), (req, res) => {
@@ -243,10 +273,23 @@ app.post('/messages', (req, res) => {
     return res.status(400).json({ error: '消息内容不能为空' })
   }
 
-  // 更新发送者的在线状态（如果有userId）
-  // 注：这里只是兼容旧逻辑，主要通过心跳更新
+  // 检查用户是否为管理员
+  const checkAdminAndProceed = () => {
+    // 检测违禁词（管理员不受限制）
+    if (newMessage.text && !newMessage.isAdmin) {
+      const bannedCheck = containsBannedWords(newMessage.text)
+      if (bannedCheck.hasBanned) {
+        return res.status(400).json({ 
+          error: '消息包含违禁词，无法发送', 
+          bannedWords: bannedCheck.words 
+        })
+      }
+    }
 
-  fs.readFile(MESSAGES_FILE, 'utf-8', (err, data) => {
+    // 更新发送者的在线状态（如果有userId）
+    // 注：这里只是兼容旧逻辑，主要通过心跳更新
+
+    fs.readFile(MESSAGES_FILE, 'utf-8', (err, data) => {
     if (err) {
       console.error('读取消息文件失败:', err)
       return res.status(500).json({ error: '无法读取消息' })
@@ -271,7 +314,11 @@ app.post('/messages', (req, res) => {
       console.error('解析消息失败:', parseErr)
       res.status(500).json({ error: '解析消息失败' })
     }
-  })
+    })
+  }
+
+  // 执行检查和处理
+  checkAdminAndProceed()
 })
 
 app.get('/notice', (req, res) => {
@@ -340,8 +387,8 @@ app.post('/heartbeat', (req, res) => {
       }
       
       try {
-        const accounts = JSON.parse(data)
-        const user = accounts.find(u => u.id === session.userId)
+        const accountsData = JSON.parse(data)
+        const user = accountsData.users.find(u => u.id === session.userId)
         
         if (user) {
           updateUserOnlineStatus(user.id, user.username, user.avatar)
@@ -356,7 +403,19 @@ app.post('/heartbeat', (req, res) => {
   })
 })
 app.get('/message_manage', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'manage.html'))
+  // 验证管理员权限
+  const token = req.query.token || req.headers.authorization?.replace('Bearer ', '')
+  
+  if (!token) {
+    return res.redirect('/admin-login.html')
+  }
+
+  verifyAdminToken(token, (isValid) => {
+    if (!isValid) {
+      return res.redirect('/admin-login.html')
+    }
+    res.sendFile(path.join(__dirname, 'public', 'manage.html'))
+  })
 })
 
 // 删除消息接口
@@ -481,6 +540,27 @@ app.post('/admin/login', (req, res) => {
     } catch (parseErr) {
       console.error('解析管理员文件失败:', parseErr)
       res.status(500).json({ error: '服务器错误' })
+    }
+  })
+})
+
+// 验证管理员token接口
+app.get('/admin/verify', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+
+  if (!token) {
+    return res.json({ valid: false })
+  }
+
+  verifyAdminToken(token, (isValid, session) => {
+    if (isValid) {
+      res.json({ 
+        valid: true, 
+        username: session.username, 
+        role: session.role 
+      })
+    } else {
+      res.json({ valid: false })
     }
   })
 })
@@ -805,6 +885,140 @@ app.post('/badges/user', (req, res) => {
   })
 })
 
+// ==================== 违禁词管理 ====================
+
+// 获取违禁词列表
+app.get('/banned-words', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+
+  verifyAdminToken(token, (isValid) => {
+    if (!isValid) {
+      return res.status(403).json({ error: '无权限访问' })
+    }
+
+    fs.readFile(BANNED_WORDS_FILE, 'utf-8', (err, data) => {
+      if (err) {
+        return res.status(500).json({ error: '读取违禁词文件失败' })
+      }
+
+      try {
+        res.json(JSON.parse(data))
+      } catch (parseErr) {
+        res.status(500).json({ error: '解析违禁词文件失败' })
+      }
+    })
+  })
+})
+
+// 添加违禁词
+app.post('/banned-words/add', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  const { word } = req.body
+
+  verifyAdminToken(token, (isValid) => {
+    if (!isValid) {
+      return res.status(403).json({ error: '无权限访问' })
+    }
+
+    if (!word || word.trim() === '') {
+      return res.status(400).json({ error: '违禁词不能为空' })
+    }
+
+    fs.readFile(BANNED_WORDS_FILE, 'utf-8', (err, data) => {
+      if (err) {
+        return res.status(500).json({ error: '读取违禁词文件失败' })
+      }
+
+      try {
+        const bannedData = JSON.parse(data)
+        
+        // 检查是否已存在
+        if (bannedData.words.includes(word.trim())) {
+          return res.status(400).json({ error: '该违禁词已存在' })
+        }
+
+        bannedData.words.push(word.trim())
+
+        fs.writeFile(BANNED_WORDS_FILE, JSON.stringify(bannedData, null, 2), 'utf-8', (writeErr) => {
+          if (writeErr) {
+            return res.status(500).json({ error: '保存违禁词失败' })
+          }
+
+          res.json({ success: true, words: bannedData.words })
+        })
+      } catch (parseErr) {
+        res.status(500).json({ error: '解析违禁词文件失败' })
+      }
+    })
+  })
+})
+
+// 删除违禁词
+app.post('/banned-words/delete', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  const { word } = req.body
+
+  verifyAdminToken(token, (isValid) => {
+    if (!isValid) {
+      return res.status(403).json({ error: '无权限访问' })
+    }
+
+    fs.readFile(BANNED_WORDS_FILE, 'utf-8', (err, data) => {
+      if (err) {
+        return res.status(500).json({ error: '读取违禁词文件失败' })
+      }
+
+      try {
+        const bannedData = JSON.parse(data)
+        const initialLength = bannedData.words.length
+        bannedData.words = bannedData.words.filter(w => w !== word)
+
+        if (bannedData.words.length === initialLength) {
+          return res.status(404).json({ error: '违禁词未找到' })
+        }
+
+        fs.writeFile(BANNED_WORDS_FILE, JSON.stringify(bannedData, null, 2), 'utf-8', (writeErr) => {
+          if (writeErr) {
+            return res.status(500).json({ error: '保存违禁词失败' })
+          }
+
+          res.json({ success: true, words: bannedData.words })
+        })
+      } catch (parseErr) {
+        res.status(500).json({ error: '解析违禁词文件失败' })
+      }
+    })
+  })
+})
+
+// 批量更新违禁词
+app.post('/banned-words/update', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  const { words } = req.body
+
+  verifyAdminToken(token, (isValid) => {
+    if (!isValid) {
+      return res.status(403).json({ error: '无权限访问' })
+    }
+
+    if (!Array.isArray(words)) {
+      return res.status(400).json({ error: '违禁词列表格式错误' })
+    }
+
+    const bannedData = {
+      words: words.filter(w => w && w.trim() !== '').map(w => w.trim())
+    }
+
+    fs.writeFile(BANNED_WORDS_FILE, JSON.stringify(bannedData, null, 2), 'utf-8', (writeErr) => {
+      if (writeErr) {
+        return res.status(500).json({ error: '保存违禁词失败' })
+      }
+
+      res.json({ success: true, words: bannedData.words })
+    })
+  })
+})
+
 // ==================== 用户账号系统 ====================
 
 // 用户注册
@@ -1019,6 +1233,195 @@ app.get('/users/list', (req, res) => {
         res.json({ users })
       } catch (parseErr) {
         res.status(500).json({ error: '服务器错误' })
+      }
+    })
+  })
+})
+
+// ==================== 用户管理（管理员功能） ====================
+
+// 获取所有用户列表（管理员）
+app.get('/admin/users', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+
+  verifyAdminToken(token, (isValid) => {
+    if (!isValid) {
+      return res.status(403).json({ error: '无权限访问' })
+    }
+
+    fs.readFile(ACCOUNTS_FILE, 'utf-8', (err, data) => {
+      if (err) {
+        return res.status(500).json({ error: '读取用户文件失败' })
+      }
+
+      try {
+        const accountsData = JSON.parse(data)
+        const users = accountsData.users.map((u) => ({
+          id: u.id,
+          username: u.username,
+          email: u.email,
+          avatar: u.avatar,
+          createdAt: u.createdAt,
+          lastLoginAt: u.lastLoginAt,
+        }))
+        res.json({ users })
+      } catch (parseErr) {
+        res.status(500).json({ error: '解析用户文件失败' })
+      }
+    })
+  })
+})
+
+// 删除用户（管理员）
+app.delete('/admin/users/:id', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  const userId = req.params.id
+
+  verifyAdminToken(token, (isValid) => {
+    if (!isValid) {
+      return res.status(403).json({ error: '无权限访问' })
+    }
+
+    fs.readFile(ACCOUNTS_FILE, 'utf-8', (err, data) => {
+      if (err) {
+        return res.status(500).json({ error: '读取用户文件失败' })
+      }
+
+      try {
+        const accountsData = JSON.parse(data)
+        const initialLength = accountsData.users.length
+        accountsData.users = accountsData.users.filter((u) => u.id !== userId)
+
+        if (accountsData.users.length === initialLength) {
+          return res.status(404).json({ error: '用户未找到' })
+        }
+
+        // 删除该用户的所有会话
+        for (const token in accountsData.sessions) {
+          if (accountsData.sessions[token].userId === userId) {
+            delete accountsData.sessions[token]
+          }
+        }
+
+        fs.writeFile(ACCOUNTS_FILE, JSON.stringify(accountsData, null, 2), 'utf-8', (writeErr) => {
+          if (writeErr) {
+            return res.status(500).json({ error: '保存用户文件失败' })
+          }
+
+          res.json({ success: true })
+        })
+      } catch (parseErr) {
+        res.status(500).json({ error: '解析用户文件失败' })
+      }
+    })
+  })
+})
+
+// 修改用户信息（管理员）
+app.put('/admin/users/:id', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  const userId = req.params.id
+  const { username, email, password } = req.body
+
+  verifyAdminToken(token, (isValid) => {
+    if (!isValid) {
+      return res.status(403).json({ error: '无权限访问' })
+    }
+
+    fs.readFile(ACCOUNTS_FILE, 'utf-8', (err, data) => {
+      if (err) {
+        return res.status(500).json({ error: '读取用户文件失败' })
+      }
+
+      try {
+        const accountsData = JSON.parse(data)
+        const user = accountsData.users.find((u) => u.id === userId)
+
+        if (!user) {
+          return res.status(404).json({ error: '用户未找到' })
+        }
+
+        // 如果修改用户名，检查是否重复
+        if (username && username !== user.username) {
+          if (accountsData.users.find((u) => u.username === username && u.id !== userId)) {
+            return res.status(400).json({ error: '用户名已存在' })
+          }
+          user.username = username
+          user.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`
+        }
+
+        if (email !== undefined) {
+          user.email = email
+        }
+
+        if (password) {
+          if (password.length < 6) {
+            return res.status(400).json({ error: '密码长度至少为6位' })
+          }
+          user.password = password
+        }
+
+        fs.writeFile(ACCOUNTS_FILE, JSON.stringify(accountsData, null, 2), 'utf-8', (writeErr) => {
+          if (writeErr) {
+            return res.status(500).json({ error: '保存用户文件失败' })
+          }
+
+          res.json({
+            success: true,
+            user: {
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              avatar: user.avatar,
+            },
+          })
+        })
+      } catch (parseErr) {
+        res.status(500).json({ error: '解析用户文件失败' })
+      }
+    })
+  })
+})
+
+// 重置用户密码（管理员）
+app.post('/admin/users/:id/reset-password', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  const userId = req.params.id
+  const { newPassword } = req.body
+
+  verifyAdminToken(token, (isValid) => {
+    if (!isValid) {
+      return res.status(403).json({ error: '无权限访问' })
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: '密码长度至少为6位' })
+    }
+
+    fs.readFile(ACCOUNTS_FILE, 'utf-8', (err, data) => {
+      if (err) {
+        return res.status(500).json({ error: '读取用户文件失败' })
+      }
+
+      try {
+        const accountsData = JSON.parse(data)
+        const user = accountsData.users.find((u) => u.id === userId)
+
+        if (!user) {
+          return res.status(404).json({ error: '用户未找到' })
+        }
+
+        user.password = newPassword
+
+        fs.writeFile(ACCOUNTS_FILE, JSON.stringify(accountsData, null, 2), 'utf-8', (writeErr) => {
+          if (writeErr) {
+            return res.status(500).json({ error: '保存用户文件失败' })
+          }
+
+          res.json({ success: true })
+        })
+      } catch (parseErr) {
+        res.status(500).json({ error: '解析用户文件失败' })
       }
     })
   })

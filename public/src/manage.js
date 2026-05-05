@@ -12,6 +12,13 @@ const noticeModal = document.getElementById('notice-modal')
 const deleteModal = document.getElementById('delete-modal')
 const roomSettingsModal = document.getElementById('room-settings-modal')
 const adminSettingsModal = document.getElementById('admin-settings-modal')
+const adminManageModal = document.getElementById('admin-manage-modal')
+const addAdminModal = document.getElementById('add-admin-modal')
+const badgeManageModal = document.getElementById('badge-manage-modal')
+const assignBadgeModal = document.getElementById('assign-badge-modal')
+const bannedWordsModal = document.getElementById('banned-words-modal')
+const userManageModal = document.getElementById('user-manage-modal')
+const editUserModal = document.getElementById('edit-user-modal')
 const totalMessagesEl = document.getElementById('total-messages')
 const activeUsersEl = document.getElementById('active-users')
 const totalFujianEl = document.getElementById('total-attachments')
@@ -694,6 +701,15 @@ function setupEventListeners() {
       closeModal(editModal)
       closeModal(noticeModal)
       closeModal(deleteModal)
+      closeModal(roomSettingsModal)
+      closeModal(adminSettingsModal)
+      closeModal(adminManageModal)
+      closeModal(addAdminModal)
+      closeModal(badgeManageModal)
+      closeModal(assignBadgeModal)
+      closeModal(bannedWordsModal)
+      closeModal(userManageModal)
+      closeModal(editUserModal)
     })
   })
 
@@ -745,6 +761,13 @@ function setupEventListeners() {
       closeModal(deleteModal)
       closeModal(roomSettingsModal)
       closeModal(adminSettingsModal)
+      closeModal(adminManageModal)
+      closeModal(addAdminModal)
+      closeModal(badgeManageModal)
+      closeModal(assignBadgeModal)
+      closeModal(bannedWordsModal)
+      closeModal(userManageModal)
+      closeModal(editUserModal)
     }
   })
 
@@ -768,6 +791,665 @@ function setupEventListeners() {
       adminLogout()
     }
   })
+
+  // 管理员管理事件
+  document.getElementById('add-admin-btn')?.addEventListener('click', () => {
+    openAddAdminModal()
+  })
+  document.getElementById('confirm-add-admin')?.addEventListener('click', addAdmin)
+  document.getElementById('cancel-add-admin')?.addEventListener('click', () => {
+    closeModal(addAdminModal)
+  })
+
+  // 铭牌管理事件
+  document.getElementById('add-badge-btn')?.addEventListener('click', addBadge)
+  document.getElementById('assign-badge-btn')?.addEventListener('click', () => {
+    openAssignBadgeModal()
+  })
+  document.getElementById('confirm-assign-badge')?.addEventListener('click', assignBadge)
+  document.getElementById('cancel-assign-badge')?.addEventListener('click', () => {
+    closeModal(assignBadgeModal)
+  })
+
+  // 违禁词管理事件
+  document.getElementById('add-banned-word-btn')?.addEventListener('click', addBannedWord)
+  document.getElementById('close-banned-words')?.addEventListener('click', () => {
+    closeModal(bannedWordsModal)
+  })
+  document.getElementById('new-banned-word')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      addBannedWord()
+    }
+  })
+
+  // 用户管理事件
+  document.getElementById('close-user-manage')?.addEventListener('click', () => {
+    closeModal(userManageModal)
+  })
+  document.getElementById('search-user-input')?.addEventListener('input', (e) => {
+    filterUsers(e.target.value)
+  })
+  document.getElementById('cancel-edit-user')?.addEventListener('click', () => {
+    closeModal(editUserModal)
+  })
+  document.getElementById('save-edit-user')?.addEventListener('click', saveUserEdit)
+}
+
+// ==================== 管理员管理功能 ====================
+
+async function openAdminManageModal() {
+  try {
+    const response = await fetch('/admin/list', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+      },
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.admins) {
+      renderAdminList(data.admins)
+      adminManageModal.style.display = 'flex'
+    } else {
+      toastr.error(data.error || '获取管理员列表失败')
+    }
+  } catch (error) {
+    console.error('获取管理员列表失败:', error)
+    toastr.error('获取管理员列表失败')
+  }
+}
+
+function renderAdminList(admins) {
+  const adminListBody = document.getElementById('admin-list-body')
+  adminListBody.innerHTML = ''
+
+  admins.forEach((admin) => {
+    const row = document.createElement('tr')
+    const createdDate = new Date(admin.createdAt).toLocaleDateString()
+    const roleText = admin.role === 'super' ? '超级管理员' : '普通管理员'
+
+    row.innerHTML = `
+      <td>${admin.username}</td>
+      <td>${roleText}</td>
+      <td>${createdDate}</td>
+      <td>
+        <button class="action-btn delete-btn" onclick="deleteAdmin('${admin.id}', '${admin.username}')">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </td>
+    `
+    adminListBody.appendChild(row)
+  })
+}
+
+function openAddAdminModal() {
+  document.getElementById('new-admin-username').value = ''
+  document.getElementById('new-admin-password').value = ''
+  document.getElementById('new-admin-role').value = 'normal'
+  addAdminModal.style.display = 'flex'
+}
+
+async function addAdmin() {
+  const username = document.getElementById('new-admin-username').value.trim()
+  const password = document.getElementById('new-admin-password').value.trim()
+  const role = document.getElementById('new-admin-role').value
+
+  if (!username || !password) {
+    toastr.error('用户名和密码不能为空')
+    return
+  }
+
+  try {
+    const response = await fetch('/admin/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ username, password, role }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      closeModal(addAdminModal)
+      toastr.success('管理员添加成功')
+      // 刷新管理员列表
+      openAdminManageModal()
+    } else {
+      toastr.error(data.error || '添加管理员失败')
+    }
+  } catch (error) {
+    console.error('添加管理员失败:', error)
+    toastr.error('添加管理员失败')
+  }
+}
+
+async function deleteAdmin(adminId, username) {
+  if (!confirm(`确定要删除管理员 "${username}" 吗？`)) {
+    return
+  }
+
+  try {
+    const response = await fetch(`/admin/${adminId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+      },
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      toastr.success('管理员已删除')
+      // 刷新管理员列表
+      openAdminManageModal()
+    } else {
+      toastr.error(data.error || '删除管理员失败')
+    }
+  } catch (error) {
+    console.error('删除管理员失败:', error)
+    toastr.error('删除管理员失败')
+  }
+}
+
+// ==================== 铭牌管理功能 ====================
+
+let badgesData = { badges: [], userBadges: {} }
+
+async function openBadgeManageModal() {
+  try {
+    const response = await fetch('/badges')
+    const data = await response.json()
+
+    if (response.ok) {
+      badgesData = data
+      renderBadgeList(data.badges)
+      badgeManageModal.style.display = 'flex'
+    } else {
+      toastr.error('获取铭牌列表失败')
+    }
+  } catch (error) {
+    console.error('获取铭牌列表失败:', error)
+    toastr.error('获取铭牌列表失败')
+  }
+}
+
+function renderBadgeList(badges) {
+  const badgeList = document.getElementById('badge-list')
+  badgeList.innerHTML = ''
+
+  if (badges.length === 0) {
+    badgeList.innerHTML = '<p style="text-align: center; color: #999;">暂无铭牌</p>'
+    return
+  }
+
+  badges.forEach((badge, index) => {
+    const badgeItem = document.createElement('div')
+    badgeItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px;'
+
+    badgeItem.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <span style="font-size: 1.5rem;">${badge.icon}</span>
+        <div>
+          <div style="font-weight: 600;">${badge.name}</div>
+          <div style="font-size: 0.85rem; color: #666;">ID: ${badge.id}</div>
+        </div>
+        <div style="padding: 5px 12px; background: ${badge.bgColor}; color: ${badge.color}; border-radius: 15px; font-size: 0.9rem;">
+          ${badge.icon} ${badge.name}
+        </div>
+      </div>
+      <button class="action-btn delete-btn" onclick="deleteBadge(${index})">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+    `
+    badgeList.appendChild(badgeItem)
+  })
+}
+
+async function addBadge() {
+  const id = prompt('请输入铭牌ID（英文，如: vip）:')
+  if (!id) return
+
+  const name = prompt('请输入铭牌名称:')
+  if (!name) return
+
+  const icon = prompt('请输入铭牌图标（emoji）:', '⭐')
+  if (!icon) return
+
+  const color = prompt('请输入文字颜色（hex格式）:', '#FFD700')
+  if (!color) return
+
+  const bgColor = prompt('请输入背景颜色（hex格式）:', '#FFF8DC')
+  if (!bgColor) return
+
+  const newBadge = { id, name, icon, color, bgColor }
+
+  try {
+    badgesData.badges.push(newBadge)
+
+    const response = await fetch('/badges', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify(badgesData),
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      toastr.success('铭牌添加成功')
+      renderBadgeList(badgesData.badges)
+    } else {
+      // 回滚
+      badgesData.badges.pop()
+      toastr.error('添加铭牌失败')
+    }
+  } catch (error) {
+    badgesData.badges.pop()
+    console.error('添加铭牌失败:', error)
+    toastr.error('添加铭牌失败')
+  }
+}
+
+async function deleteBadge(index) {
+  const badge = badgesData.badges[index]
+  if (!confirm(`确定要删除铭牌 "${badge.name}" 吗？`)) {
+    return
+  }
+
+  try {
+    const removedBadge = badgesData.badges.splice(index, 1)[0]
+
+    const response = await fetch('/badges', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify(badgesData),
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      toastr.success('铭牌已删除')
+      renderBadgeList(badgesData.badges)
+    } else {
+      // 回滚
+      badgesData.badges.splice(index, 0, removedBadge)
+      toastr.error('删除铭牌失败')
+    }
+  } catch (error) {
+    console.error('删除铭牌失败:', error)
+    toastr.error('删除铭牌失败')
+  }
+}
+
+async function openAssignBadgeModal() {
+  // 加载铭牌复选框
+  const badgeCheckboxes = document.getElementById('badge-checkboxes')
+  badgeCheckboxes.innerHTML = ''
+
+  if (badgesData.badges.length === 0) {
+    badgeCheckboxes.innerHTML = '<p style="color: #999;">暂无可用铭牌</p>'
+  } else {
+    badgesData.badges.forEach((badge) => {
+      const checkboxDiv = document.createElement('div')
+      checkboxDiv.style.cssText = 'margin-bottom: 10px;'
+      checkboxDiv.innerHTML = `
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+          <input type="checkbox" value="${badge.id}" style="width: 18px; height: 18px;">
+          <span>${badge.icon} ${badge.name}</span>
+        </label>
+      `
+      badgeCheckboxes.appendChild(checkboxDiv)
+    })
+  }
+
+  document.getElementById('assign-username').value = ''
+  assignBadgeModal.style.display = 'flex'
+}
+
+async function assignBadge() {
+  const username = document.getElementById('assign-username').value.trim()
+  if (!username) {
+    toastr.error('请输入用户名')
+    return
+  }
+
+  const checkboxes = document.querySelectorAll('#badge-checkboxes input[type="checkbox"]:checked')
+  const badgeIds = Array.from(checkboxes).map((cb) => cb.value)
+
+  try {
+    const response = await fetch('/badges/user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ username, badgeIds }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      closeModal(assignBadgeModal)
+      toastr.success('铭牌分配成功')
+    } else {
+      toastr.error(data.error || '分配铭牌失败')
+    }
+  } catch (error) {
+    console.error('分配铭牌失败:', error)
+    toastr.error('分配铭牌失败')
+  }
+}
+
+// ==================== 违禁词管理功能 ====================
+
+let bannedWordsData = { words: [] }
+
+async function openBannedWordsModal() {
+  try {
+    const response = await fetch('/banned-words', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+      },
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      bannedWordsData = data
+      renderBannedWordsList(data.words)
+      bannedWordsModal.style.display = 'flex'
+    } else {
+      toastr.error(data.error || '获取违禁词列表失败')
+    }
+  } catch (error) {
+    console.error('获取违禁词列表失败:', error)
+    toastr.error('获取违禁词列表失败')
+  }
+}
+
+function renderBannedWordsList(words) {
+  const bannedWordsList = document.getElementById('banned-words-list')
+  const bannedWordsCount = document.getElementById('banned-words-count')
+  
+  bannedWordsCount.textContent = words.length
+  bannedWordsList.innerHTML = ''
+
+  if (words.length === 0) {
+    bannedWordsList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">暂无违禁词</p>'
+    return
+  }
+
+  words.forEach((word, index) => {
+    const wordItem = document.createElement('div')
+    wordItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; margin-bottom: 8px; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #e63946;'
+
+    wordItem.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-ban" style="color: #e63946;"></i>
+        <span style="font-weight: 500;">${escapeHtml(word)}</span>
+      </div>
+      <button class="action-btn delete-btn" onclick="deleteBannedWord('${escapeHtml(word)}')">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+    `
+    bannedWordsList.appendChild(wordItem)
+  })
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
+
+async function addBannedWord() {
+  const input = document.getElementById('new-banned-word')
+  const word = input.value.trim()
+
+  if (!word) {
+    toastr.error('请输入违禁词')
+    return
+  }
+
+  try {
+    const response = await fetch('/banned-words/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ word }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      toastr.success('违禁词添加成功')
+      input.value = ''
+      bannedWordsData.words = data.words
+      renderBannedWordsList(data.words)
+    } else {
+      toastr.error(data.error || '添加违禁词失败')
+    }
+  } catch (error) {
+    console.error('添加违禁词失败:', error)
+    toastr.error('添加违禁词失败')
+  }
+}
+
+async function deleteBannedWord(word) {
+  if (!confirm(`确定要删除违禁词 "${word}" 吗？`)) {
+    return
+  }
+
+  try {
+    const response = await fetch('/banned-words/delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ word }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      toastr.success('违禁词已删除')
+      bannedWordsData.words = data.words
+      renderBannedWordsList(data.words)
+    } else {
+      toastr.error(data.error || '删除违禁词失败')
+    }
+  } catch (error) {
+    console.error('删除违禁词失败:', error)
+    toastr.error('删除违禁词失败')
+  }
+}
+
+// ==================== 用户管理功能 ====================
+
+let allUsersData = []
+let currentEditUserId = null
+
+async function openUserManageModal() {
+  try {
+    const response = await fetch('/admin/users', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+      },
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      allUsersData = data.users
+      renderUsersList(data.users)
+      userManageModal.style.display = 'flex'
+    } else {
+      toastr.error(data.error || '获取用户列表失败')
+    }
+  } catch (error) {
+    console.error('获取用户列表失败:', error)
+    toastr.error('获取用户列表失败')
+  }
+}
+
+function renderUsersList(users) {
+  const usersList = document.getElementById('users-list')
+  const usersCount = document.getElementById('users-count')
+  
+  usersCount.textContent = users.length
+  usersList.innerHTML = ''
+
+  if (users.length === 0) {
+    usersList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">暂无用户</p>'
+    return
+  }
+
+  users.forEach((user) => {
+    const userItem = document.createElement('div')
+    userItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #4CAF50;'
+
+    const lastLogin = user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('zh-CN') : '从未登录'
+    const createdAt = new Date(user.createdAt).toLocaleString('zh-CN')
+
+    userItem.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+        <img src="${user.avatar}" alt="${user.username}" style="width: 50px; height: 50px; border-radius: 50%;" />
+        <div style="flex: 1;">
+          <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">
+            ${escapeHtml(user.username)}
+            <span style="font-size: 12px; color: #666; font-weight: normal; margin-left: 10px;">ID: ${user.id}</span>
+          </div>
+          <div style="font-size: 13px; color: #666;">
+            <i class="fas fa-envelope"></i> ${user.email || '未设置'}
+          </div>
+          <div style="font-size: 12px; color: #999; margin-top: 5px;">
+            <i class="fas fa-clock"></i> 注册: ${createdAt} | 最后登录: ${lastLogin}
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="action-btn edit-btn" onclick="openEditUserModal('${user.id}')" title="编辑">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="action-btn delete-btn" onclick="deleteUser('${user.id}', '${escapeHtml(user.username)}')" title="删除">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
+    `
+    usersList.appendChild(userItem)
+  })
+}
+
+function filterUsers(searchTerm) {
+  const filtered = allUsersData.filter(user => 
+    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.id.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+  renderUsersList(filtered)
+}
+
+async function openEditUserModal(userId) {
+  const user = allUsersData.find(u => u.id === userId)
+  if (!user) {
+    toastr.error('用户不存在')
+    return
+  }
+
+  currentEditUserId = userId
+  document.getElementById('edit-user-id').value = user.id
+  document.getElementById('edit-user-username').value = user.username
+  document.getElementById('edit-user-email').value = user.email || ''
+  document.getElementById('edit-user-password').value = ''
+
+  editUserModal.style.display = 'flex'
+}
+
+async function saveUserEdit() {
+  const userId = currentEditUserId
+  const username = document.getElementById('edit-user-username').value.trim()
+  const email = document.getElementById('edit-user-email').value.trim()
+  const password = document.getElementById('edit-user-password').value.trim()
+
+  if (!username) {
+    toastr.error('用户名不能为空')
+    return
+  }
+
+  const updateData = { username, email }
+  if (password) {
+    if (password.length < 6) {
+      toastr.error('密码长度至少为6位')
+      return
+    }
+    updateData.password = password
+  }
+
+  try {
+    const response = await fetch(`/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify(updateData),
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      toastr.success('用户信息已更新')
+      closeModal(editUserModal)
+      // 刷新用户列表
+      openUserManageModal()
+    } else {
+      toastr.error(data.error || '更新用户信息失败')
+    }
+  } catch (error) {
+    console.error('更新用户信息失败:', error)
+    toastr.error('更新用户信息失败')
+  }
+}
+
+async function deleteUser(userId, username) {
+  if (!confirm(`确定要删除用户 "${username}" 吗？\n\n此操作将：\n- 删除该用户账号\n- 清除该用户的所有会话\n- 此操作不可恢复！`)) {
+    return
+  }
+
+  try {
+    const response = await fetch(`/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+      },
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      toastr.success('用户已删除')
+      // 刷新用户列表
+      openUserManageModal()
+    } else {
+      toastr.error(data.error || '删除用户失败')
+    }
+  } catch (error) {
+    console.error('删除用户失败:', error)
+    toastr.error('删除用户失败')
+  }
 }
 
 // 启动应用

@@ -241,5 +241,22 @@
     "attachments": [],
     "timestamp": "2026-05-05T15:09:43.675Z",
     "id": "thxzvvcusy1777993783675"
+  },
+  {
+    "username": "123",
+    "avatar": "https://ui-avatars.com/api/?name=123&background=random",
+    "text": "11",
+    "attachments": [],
+    "timestamp": "2026-05-05T17:13:56.451Z",
+    "id": "dpjqs0lwr1778001236451"
+  },
+  {
+    "username": "qilan",
+    "avatar": "https://ui-avatars.com/api/?name=qilan&background=random",
+    "text": "测试违禁词",
+    "attachments": [],
+    "timestamp": "2026-05-05T17:23:56.423Z",
+    "id": "2zi8w25907o1778001836423",
+    "isAdmin": true
   }
 ]

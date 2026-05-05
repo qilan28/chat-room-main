@@ -638,6 +638,7 @@ async function sendMessage() {
     attachments: attachmentUrls,
     timestamp: new Date().toISOString(),
     id: Math.random().toString(36).substring(2, 30) + Date.now(), // msgID
+    isAdmin: isAdmin || false, // 标记是否为管理员
   }
 
   // 添加引用信息

@@ -248,7 +248,7 @@
             localStorage.setItem('adminUsername', data.username)
             toastr.success('登录成功！正在跳转...')
             setTimeout(() => {
-              window.location.href = '/message_manage'
+              window.location.href = `/message_manage?token=${data.token}`
             }, 1000)
           } else {
             toastr.error(data.error || '登录失败')
@@ -266,10 +266,32 @@
       // 检查是否已登录
       const adminToken = localStorage.getItem('adminToken')
       if (adminToken) {
-        toastr.info('检测到已登录，正在跳转...')
-        setTimeout(() => {
-          window.location.href = '/message_manage'
-        }, 1000)
+        // 验证 token 是否有效
+        fetch('/admin/verify', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.valid) {
+              toastr.info('检测到已登录，正在跳转...')
+              setTimeout(() => {
+                window.location.href = `/message_manage?token=${adminToken}`
+              }, 1000)
+            } else {
+              // Token 无效，清除本地存储
+              localStorage.removeItem('adminToken')
+              localStorage.removeItem('adminUsername')
+            }
+          })
+          .catch((error) => {
+            console.error('验证 token 失败:', error)
+            // 验证失败，清除本地存储
+            localStorage.removeItem('adminToken')
+            localStorage.removeItem('adminUsername')
+          })
       }
     </script>
   </body>

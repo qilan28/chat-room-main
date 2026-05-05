@@ -593,6 +593,8 @@
           <button class="ee-btn" onclick="openRoomSettingsModal()">聊天室设置</button>
           <button class="ee-btn" onclick="openAdminManageModal()">管理员管理</button>
           <button class="ee-btn" onclick="openBadgeManageModal()">铭牌管理</button>
+          <button class="ee-btn" onclick="openBannedWordsModal()">违禁词管理</button>
+          <button class="ee-btn" onclick="openUserManageModal()">用户管理</button>
           <button class="ee-btn" onclick="openAdminSettingsModal()">个人设置</button>
           <button class="filter-btn active" data-filter="all">全部消息</button>
           <button class="filter-btn" data-filter="text">仅文本</button>
@@ -909,6 +911,91 @@
         </div>
       </div>
     </div>
+
+    <!-- 违禁词管理模态框 -->
+    <div class="modal" id="banned-words-modal">
+      <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+          <h2>违禁词管理</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+            <input type="text" id="new-banned-word" class="form-control" placeholder="输入新的违禁词" style="flex: 1;" />
+            <button class="btn btn-primary" id="add-banned-word-btn">
+              <i class="fas fa-plus"></i> 添加
+            </button>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <strong>违禁词列表 (<span id="banned-words-count">0</span>)</strong>
+          </div>
+          
+          <div id="banned-words-list" style="max-height: 400px; overflow-y: auto;">
+            <!-- 违禁词列表 -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="close-banned-words">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 用户管理模态框 -->
+    <div class="modal" id="user-manage-modal">
+      <div class="modal-content" style="max-width: 1000px;">
+        <div class="modal-header">
+          <h2>用户管理</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <strong>用户列表 (<span id="users-count">0</span>)</strong>
+            <input type="text" id="search-user-input" class="form-control" placeholder="搜索用户名..." style="width: 250px;" />
+          </div>
+          
+          <div id="users-list" style="max-height: 500px; overflow-y: auto;">
+            <!-- 用户列表 -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="close-user-manage">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑用户模态框 -->
+    <div class="modal" id="edit-user-modal">
+      <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+          <h2>编辑用户</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>用户ID</label>
+            <input type="text" id="edit-user-id" class="form-control" readonly style="background: #f5f5f5;" />
+          </div>
+          <div class="form-group">
+            <label>用户名 *</label>
+            <input type="text" id="edit-user-username" class="form-control" placeholder="输入用户名" />
+          </div>
+          <div class="form-group">
+            <label>邮箱</label>
+            <input type="email" id="edit-user-email" class="form-control" placeholder="输入邮箱" />
+          </div>
+          <div class="form-group">
+            <label>新密码（留空则不修改）</label>
+            <input type="password" id="edit-user-password" class="form-control" placeholder="输入新密码（至少6位）" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancel-edit-user">取消</button>
+          <button class="btn btn-primary" id="save-edit-user">保存</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       toastr.options = {
         // toastr配置

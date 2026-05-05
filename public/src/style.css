@@ -788,6 +788,7 @@ a:hover {
     flex-direction: row;
     padding: 10px;
     align-items: center;
+    gap: 8px;
   }
 
   .user-profile {
@@ -797,7 +798,24 @@ a:hover {
     flex: 1;
   }
 
-  #settings-btn {
+  #settings-btn,
+  #logout-btn {
+    margin: 0;
+    padding: 10px 12px;
+    width: auto;
+    min-width: 44px;
+    font-size: 18px;
+    border-radius: 12px;
+  }
+
+  /* 移动端隐藏按钮文字，只显示图标 */
+  #settings-btn .btn-text,
+  #logout-btn .btn-text {
+    display: none;
+  }
+
+  #settings-btn i,
+  #logout-btn i {
     margin: 0;
   }
 
@@ -1274,6 +1292,7 @@ a:hover {
   justify-content: center;
   gap: 8px;
   width: 100%;
+  margin-top: 10px;
 }
 
 #logout-btn:hover {
