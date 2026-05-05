@@ -78,8 +78,11 @@
               <input type="file" id="file-input" multiple style="display: none" />
             </div>
           </div>
-          <input type="text" id="message-input" placeholder="输入消息... (回车发送)" />
+          <input type="text" id="message-input" placeholder="输入消息... (回车发送)" maxlength="500" />
           <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div class="message-input-info">
+          <span id="char-counter" class="char-counter">0/500</span>
         </div>
         <div class="attachments-preview" id="attachments-preview"></div>
       </div>
@@ -113,7 +116,7 @@
       </div>
     </div>
     <footer class="footer">
-      <p class="footer-a">chat-room 1.0 |<a href="https://github.com/woshimaniubi8/chat-room/" class="footer-a" target="_blank">View in Github</a></p>
+      <!-- <p class="footer-a">chat-room 1.0 |<a href="https://github.com/woshimaniubi8/chat-room/" class="footer-a" target="_blank">View in Github</a></p> -->
     </footer>
 
     <!-- 右键菜单 -->

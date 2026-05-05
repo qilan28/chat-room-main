@@ -588,10 +588,63 @@ function renderfujianPreview(attachment) {
   fujianPreview.appendChild(item)
 }
 const messageInput = document.getElementById('message-input')
+const sendBtn = document.getElementById('send-btn')
+const charCounter = document.getElementById('char-counter')
+
+// 字符计数器
+const MAX_MESSAGE_LENGTH = 500
+
+messageInput.addEventListener('input', () => {
+  const length = messageInput.value.length
+  charCounter.textContent = `${length}/${MAX_MESSAGE_LENGTH}`
+  
+  // 根据长度改变颜色
+  charCounter.classList.remove('warning', 'danger')
+  if (length >= MAX_MESSAGE_LENGTH) {
+    charCounter.classList.add('danger')
+  } else if (length >= MAX_MESSAGE_LENGTH * 0.8) {
+    charCounter.classList.add('warning')
+  }
+})
+
+// 发送冷却计时器
+let sendCooldown = false
+let cooldownTimer = null
+
+function startSendCooldown(seconds) {
+  if (isAdmin) return // 管理员不受限制
+  
+  sendCooldown = true
+  sendBtn.disabled = true
+  
+  let remaining = seconds
+  const originalHTML = sendBtn.innerHTML
+  
+  const updateButton = () => {
+    if (remaining > 0) {
+      sendBtn.innerHTML = `<i class="fas fa-clock"></i> ${remaining}s`
+      remaining--
+      cooldownTimer = setTimeout(updateButton, 1000)
+    } else {
+      sendBtn.disabled = false
+      sendBtn.innerHTML = originalHTML
+      sendCooldown = false
+    }
+  }
+  
+  updateButton()
+}
+
 // 发送消息
 async function sendMessage() {
   const text = messageInput.value.trim()
   if (!text && attachments.length === 0) return
+  
+  // 检查是否在冷却中
+  if (sendCooldown) {
+    toastr.warning('请稍后再发送消息')
+    return
+  }
 
   // 上传附件
   const attachmentUrls = []
@@ -686,6 +739,8 @@ async function sendMessage() {
         }
       }
       messageInput.value = ''
+      charCounter.textContent = '0/500'
+      charCounter.classList.remove('warning', 'danger')
       attachments = []
       fujianPreview.innerHTML = ''
       cancelQuote() // 清除引用
@@ -701,6 +756,11 @@ async function sendMessage() {
       setTimeout(() => {
         messagesContainer.scrollTop = messagesContainer.scrollHeight
       }, 100)
+      
+      // 启动发送冷却（普通用户2秒冷却）
+      if (!isAdmin) {
+        startSendCooldown(2)
+      }
       
       // 检测@提及并创建通知
       if (currentUser && text) {
@@ -731,7 +791,18 @@ async function sendMessage() {
         }
       }
     } else {
-      toastr.error('消息发送失败')
+      // 处理不同的错误状态码
+      const errorData = await response.json().catch(() => ({}))
+      
+      if (response.status === 429) {
+        // 发言频率限制
+        toastr.warning(errorData.error || '发言过快，请稍后再试')
+      } else if (response.status === 400) {
+        // 其他错误（违禁词、内容为空等）
+        toastr.error(errorData.error || '消息发送失败')
+      } else {
+        toastr.error('消息发送失败')
+      }
     }
   } catch (error) {
     toastr.error('发送消息失败:' + error.message)

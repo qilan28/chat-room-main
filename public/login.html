@@ -171,9 +171,56 @@
         transform: translateY(-50%) scale(0.95);
       }
 
+      .captcha-group {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+
+      .captcha-input {
+        flex: 1;
+      }
+
+      .captcha-display {
+        width: 120px;
+        height: 40px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        transition: all 0.3s;
+        overflow: hidden;
+      }
+
+      .captcha-display:hover {
+        border-color: #4361ee;
+        transform: scale(1.02);
+      }
+
+      .captcha-display svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .captcha-loading {
+        color: #999;
+        font-size: 12px;
+      }
+
       @media (max-width: 480px) {
         .auth-content {
           padding: 30px 20px;
+        }
+
+        .captcha-group {
+          flex-direction: column;
+        }
+
+        .captcha-display {
+          width: 100%;
         }
       }
     </style>
@@ -206,6 +253,19 @@
               <i class="fas fa-lock"></i>
               <input type="password" id="login-password" class="form-control" placeholder="请输入密码" required />
               <i class="fas fa-eye password-toggle" data-target="login-password"></i>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="login-captcha">验证码</label>
+            <div class="captcha-group">
+              <div class="input-wrapper captcha-input">
+                <i class="fas fa-shield-alt"></i>
+                <input type="text" id="login-captcha" class="form-control" placeholder="请输入验证码" required maxlength="4" />
+              </div>
+              <div class="captcha-display" id="login-captcha-img" title="点击刷新">
+                <span class="captcha-loading">加载中...</span>
+              </div>
             </div>
           </div>
 
@@ -265,6 +325,19 @@
             </div>
           </div>
 
+          <div class="form-group">
+            <label for="register-captcha">验证码</label>
+            <div class="captcha-group">
+              <div class="input-wrapper captcha-input">
+                <i class="fas fa-shield-alt"></i>
+                <input type="text" id="register-captcha" class="form-control" placeholder="请输入验证码" required maxlength="4" />
+              </div>
+              <div class="captcha-display" id="register-captcha-img" title="点击刷新">
+                <span class="captcha-loading">加载中...</span>
+              </div>
+            </div>
+          </div>
+
           <button type="submit" class="btn-submit" id="register-btn">
             <i class="fas fa-user-plus"></i> 注册
           </button>
@@ -285,6 +358,42 @@
         positionClass: 'toast-top-center',
         timeOut: '3000',
       }
+
+      // 验证码管理
+      let loginCaptchaId = null
+      let registerCaptchaId = null
+
+      // 加载验证码
+      async function loadCaptcha(type) {
+        try {
+          const response = await fetch(`${SRC_URL}/captcha`)
+          const data = await response.json()
+
+          if (type === 'login') {
+            loginCaptchaId = data.captchaId
+            document.getElementById('login-captcha-img').innerHTML = data.captchaSvg
+          } else {
+            registerCaptchaId = data.captchaId
+            document.getElementById('register-captcha-img').innerHTML = data.captchaSvg
+          }
+        } catch (error) {
+          console.error('加载验证码失败:', error)
+          toastr.error('加载验证码失败')
+        }
+      }
+
+      // 点击刷新验证码
+      document.getElementById('login-captcha-img').addEventListener('click', () => {
+        loadCaptcha('login')
+      })
+
+      document.getElementById('register-captcha-img').addEventListener('click', () => {
+        loadCaptcha('register')
+      })
+
+      // 页面加载时加载验证码
+      loadCaptcha('login')
+      loadCaptcha('register')
 
       // 标签切换
       document.querySelectorAll('.auth-tab').forEach((tab) => {
@@ -320,10 +429,16 @@
 
         const username = document.getElementById('login-username').value.trim()
         const password = document.getElementById('login-password').value.trim()
+        const captchaText = document.getElementById('login-captcha').value.trim()
         const btn = document.getElementById('login-btn')
 
         if (!username || !password) {
           toastr.error('请输入用户名和密码')
+          return
+        }
+
+        if (!captchaText) {
+          toastr.error('请输入验证码')
           return
         }
 
@@ -334,7 +449,7 @@
           const response = await fetch(`${SRC_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ username, password, captchaId: loginCaptchaId, captchaText }),
           })
 
           const data = await response.json()
@@ -350,12 +465,18 @@
             toastr.error(data.error || '登录失败')
             btn.disabled = false
             btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录'
+            // 刷新验证码
+            document.getElementById('login-captcha').value = ''
+            loadCaptcha('login')
           }
         } catch (error) {
           console.error('登录错误:', error)
           toastr.error('登录失败，请检查网络连接')
           btn.disabled = false
           btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录'
+          // 刷新验证码
+          document.getElementById('login-captcha').value = ''
+          loadCaptcha('login')
         }
       })
 
@@ -367,6 +488,7 @@
         const email = document.getElementById('register-email').value.trim()
         const password = document.getElementById('register-password').value.trim()
         const confirm = document.getElementById('register-confirm').value.trim()
+        const captchaText = document.getElementById('register-captcha').value.trim()
         const btn = document.getElementById('register-btn')
 
         if (!username || !password) {
@@ -379,6 +501,11 @@
           return
         }
 
+        if (!captchaText) {
+          toastr.error('请输入验证码')
+          return
+        }
+
         btn.disabled = true
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 注册中...'
 
@@ -386,7 +513,7 @@
           const response = await fetch(`${SRC_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, email }),
+            body: JSON.stringify({ username, password, email, captchaId: registerCaptchaId, captchaText }),
           })
 
           const data = await response.json()
@@ -399,10 +526,16 @@
             }, 1000)
           } else {
             toastr.error(data.error || '注册失败')
+            // 刷新验证码
+            document.getElementById('register-captcha').value = ''
+            loadCaptcha('register')
           }
         } catch (error) {
           console.error('注册错误:', error)
           toastr.error('注册失败，请检查网络连接')
+          // 刷新验证码
+          document.getElementById('register-captcha').value = ''
+          loadCaptcha('register')
         } finally {
           btn.disabled = false
           btn.innerHTML = '<i class="fas fa-user-plus"></i> 注册'

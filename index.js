@@ -6,6 +6,7 @@ const multer = require('multer')
 const https = require('https')
 const cors = require('cors')
 const WebSocket = require('ws')
+const svgCaptcha = require('svg-captcha')
 
 const ENABLE_HTTPS = false // 是否使用ssl加密，需配置证书
 const PORT = 3000 // 服务器端口
@@ -264,6 +265,96 @@ app.get('/messages', (req, res) => {
   })
 })
 
+// ==================== 发言限制（防刷屏） ====================
+
+// 用户发言记录存储
+const userMessageHistory = new Map()
+
+// 发言限制配置
+const MESSAGE_LIMITS = {
+  MIN_INTERVAL: 2000,        // 最小发言间隔（毫秒）- 2秒
+  MAX_LENGTH: 500,           // 单条消息最大长度
+  DUPLICATE_CHECK_COUNT: 5,  // 检查最近几条消息是否重复
+  DUPLICATE_INTERVAL: 30000, // 重复消息检测时间窗口（毫秒）- 30秒
+}
+
+// 清理过期的发言记录
+setInterval(() => {
+  const now = Date.now()
+  for (const [userId, history] of userMessageHistory.entries()) {
+    // 只保留最近1分钟的记录
+    history.messages = history.messages.filter(msg => now - msg.timestamp < 60000)
+    if (history.messages.length === 0) {
+      userMessageHistory.delete(userId)
+    }
+  }
+}, 60000) // 每分钟清理一次
+
+// 检查用户发言限制
+function checkMessageLimit(userId, messageText, isAdmin) {
+  // 管理员不受限制
+  if (isAdmin) {
+    return { allowed: true }
+  }
+
+  const now = Date.now()
+  
+  // 获取用户历史记录
+  if (!userMessageHistory.has(userId)) {
+    userMessageHistory.set(userId, { messages: [] })
+  }
+  
+  const history = userMessageHistory.get(userId)
+  
+  // 1. 检查消息长度
+  if (messageText && messageText.length > MESSAGE_LIMITS.MAX_LENGTH) {
+    return { 
+      allowed: false, 
+      error: `消息长度不能超过${MESSAGE_LIMITS.MAX_LENGTH}个字符` 
+    }
+  }
+  
+  // 2. 检查发言频率
+  if (history.messages.length > 0) {
+    const lastMessage = history.messages[history.messages.length - 1]
+    const timeSinceLastMessage = now - lastMessage.timestamp
+    
+    if (timeSinceLastMessage < MESSAGE_LIMITS.MIN_INTERVAL) {
+      const waitTime = Math.ceil((MESSAGE_LIMITS.MIN_INTERVAL - timeSinceLastMessage) / 1000)
+      return { 
+        allowed: false, 
+        error: `发言过快，请等待${waitTime}秒后再试` 
+      }
+    }
+  }
+  
+  // 3. 检查重复内容
+  if (messageText) {
+    const recentMessages = history.messages.filter(
+      msg => now - msg.timestamp < MESSAGE_LIMITS.DUPLICATE_INTERVAL
+    ).slice(-MESSAGE_LIMITS.DUPLICATE_CHECK_COUNT)
+    
+    const duplicateCount = recentMessages.filter(
+      msg => msg.text === messageText.trim()
+    ).length
+    
+    if (duplicateCount >= 2) {
+      return { 
+        allowed: false, 
+        error: '请不要重复发送相同的消息' 
+      }
+    }
+  }
+  
+  // 记录本次发言
+  history.messages.push({
+    text: messageText ? messageText.trim() : '',
+    timestamp: now
+  })
+  
+  return { allowed: true }
+}
+
 // 创建新消息
 app.post('/messages', (req, res) => {
   const newMessage = req.body
@@ -271,6 +362,17 @@ app.post('/messages', (req, res) => {
   // 验证消息内容
   if ((!newMessage.text || newMessage.text.trim() === '') && (!newMessage.attachments || newMessage.attachments.length === 0)) {
     return res.status(400).json({ error: '消息内容不能为空' })
+  }
+
+  // 检查发言限制（管理员不受限制）
+  const limitCheck = checkMessageLimit(
+    newMessage.userId || newMessage.sender, 
+    newMessage.text, 
+    newMessage.isAdmin
+  )
+  
+  if (!limitCheck.allowed) {
+    return res.status(429).json({ error: limitCheck.error })
   }
 
   // 检查用户是否为管理员
@@ -1023,7 +1125,12 @@ app.post('/banned-words/update', (req, res) => {
 
 // 用户注册
 app.post('/auth/register', (req, res) => {
-  const { username, password, email } = req.body
+  const { username, password, email, captchaId, captchaText } = req.body
+
+  // 验证验证码
+  if (!verifyCaptcha(captchaId, captchaText)) {
+    return res.status(400).json({ error: '验证码错误或已过期' })
+  }
 
   if (!username || !password) {
     return res.status(400).json({ error: '用户名和密码不能为空' })
@@ -1075,9 +1182,79 @@ app.post('/auth/register', (req, res) => {
   })
 })
 
+// ==================== 验证码功能 ====================
+
+// 验证码存储（使用内存存储，生产环境建议使用Redis）
+const captchaStore = new Map()
+
+// 清理过期验证码
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, value] of captchaStore.entries()) {
+    if (now - value.timestamp > 5 * 60 * 1000) { // 5分钟过期
+      captchaStore.delete(key)
+    }
+  }
+}, 60 * 1000) // 每分钟清理一次
+
+// 生成验证码
+app.get('/captcha', (req, res) => {
+  const captcha = svgCaptcha.create({
+    size: 4, // 验证码长度
+    ignoreChars: '0o1ilI', // 排除容易混淆的字符
+    noise: 2, // 干扰线条数
+    color: true, // 验证码字符是否有颜色
+    background: '#f0f0f0', // 背景色
+    width: 120,
+    height: 40,
+  })
+
+  // 生成唯一ID
+  const captchaId = Math.random().toString(36).substring(2) + Date.now().toString(36)
+
+  // 存储验证码（不区分大小写）
+  captchaStore.set(captchaId, {
+    text: captcha.text.toLowerCase(),
+    timestamp: Date.now(),
+  })
+
+  res.json({
+    captchaId: captchaId,
+    captchaSvg: captcha.data,
+  })
+})
+
+// 验证验证码
+function verifyCaptcha(captchaId, captchaText) {
+  if (!captchaId || !captchaText) {
+    return false
+  }
+
+  const stored = captchaStore.get(captchaId)
+  if (!stored) {
+    return false
+  }
+
+  // 验证码只能使用一次
+  captchaStore.delete(captchaId)
+
+  // 检查是否过期（5分钟）
+  if (Date.now() - stored.timestamp > 5 * 60 * 1000) {
+    return false
+  }
+
+  // 不区分大小写比较
+  return stored.text === captchaText.toLowerCase()
+}
+
 // 用户登录
 app.post('/auth/login', (req, res) => {
-  const { username, password } = req.body
+  const { username, password, captchaId, captchaText } = req.body
+
+  // 验证验证码
+  if (!verifyCaptcha(captchaId, captchaText)) {
+    return res.status(400).json({ error: '验证码错误或已过期' })
+  }
 
   fs.readFile(ACCOUNTS_FILE, 'utf-8', (err, data) => {
     if (err) {
